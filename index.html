@@ -227,6 +227,9 @@
             color: #475569;
             font-weight: 600;
             border-bottom: 2px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            background: white;
         }
 
         td {
@@ -334,7 +337,7 @@
                     <table id="agentTable">
                         <thead id="agentTableHead"></thead>
                         <tbody id="agentTableBody"></tbody>
-                    寸
+                    </table>
                 </div>
             </div>
         </div>
@@ -403,146 +406,78 @@
                 const csvText = await fetchCSV();
                 const allRows = parseCSV(csvText);
                 
-                // Find where each section starts by looking at the first column
-                let currentSection = null;
-                let sectionRows = [];
+                console.log('Total rows:', allRows.length);
                 
+                // Reset data
+                regionData = [];
+                agentData = [];
+                cityData = [];
+                
+                // Parse each row and categorize based on content
                 for (let i = 0; i < allRows.length; i++) {
                     const row = allRows[i];
-                    const firstCol = row[0] ? row[0].toLowerCase() : '';
+                    const firstCol = row[0] ? row[0].toString() : '';
+                    const secondCol = row[1] ? row[1].toString() : '';
                     
-                    // Detect section by header
-                    if (firstCol === 'region' || firstCol === 'region_summary' || 
-                        (row.includes('Region') && row.includes('Monthly Goal'))) {
-                        currentSection = 'region';
-                        sectionRows = [];
-                        continue;
-                    }
-                    if (firstCol === 'sr. no' || firstCol === 'sr no' || 
-                        (row.includes('Agent') && row.includes('Week-1 Leads'))) {
-                        currentSection = 'agent';
-                        sectionRows = [];
-                        continue;
-                    }
-                    if (firstCol === 'city' || firstCol === 'city_wise' ||
-                        (row.includes('City') && row.includes('Country'))) {
-                        currentSection = 'city';
-                        sectionRows = [];
-                        continue;
-                    }
-                    if (firstCol === 'parameter' || firstCol === 'config' ||
-                        (row.includes('Monthly Goal (Total)'))) {
-                        currentSection = 'config';
-                        sectionRows = [];
-                        continue;
+                    // Detect Region Data (rows with region names)
+                    if (firstCol === 'Iraq' || firstCol === 'KSA' || firstCol === 'PAK' || firstCol === 'UAE' || firstCol === 'DG HP') {
+                        regionData.push({
+                            region: row[0] || '',
+                            date: row[1] || '',
+                            dailyGoal: parseFloat(row[2]) || 0,
+                            achievedLeads: parseFloat(row[3]) || 0,
+                            achievementPct: parseFloat(row[4]) || 0,
+                            monthlyGoal: parseFloat(row[5]) || 0,
+                            monthlyAchieved: parseFloat(row[6]) || 0,
+                            monthlyPct: parseFloat(row[7]) || 0,
+                            totalCalls: parseFloat(row[8]) || 0,
+                            connectedCalls: parseFloat(row[9]) || 0,
+                            whatsapp: parseFloat(row[10]) || 0,
+                            emails: parseFloat(row[11]) || 0
+                        });
                     }
                     
-                    // Add data rows to current section
-                    if (currentSection && row.length > 1 && firstCol !== '' && !firstCol.includes('region') && !firstCol.includes('agent') && !firstCol.includes('city')) {
-                        sectionRows.push(row);
+                    // Detect Agent Data
+                    else if (secondCol === 'Mehwish Noor' || secondCol === 'Azka Urooj' || secondCol === 'Sara Ahmed' || secondCol === 'Fatima Ali' || secondCol === 'Ayesha Khan') {
+                        agentData.push({
+                            srNo: row[0] || '',
+                            agent: row[1] || '',
+                            region: row[2] || '',
+                            totalCalls: parseFloat(row[3]) || 0,
+                            connectedCalls: parseFloat(row[4]) || 0,
+                            whatsapp: parseFloat(row[5]) || 0,
+                            emails: parseFloat(row[6]) || 0,
+                            selfProfiling: parseFloat(row[7]) || 0,
+                            week1: parseFloat(row[8]) || 0,
+                            week2: parseFloat(row[9]) || 0,
+                            week3: parseFloat(row[10]) || 0,
+                            week4: parseFloat(row[11]) || 0,
+                            week5: parseFloat(row[12]) || 0,
+                            monthlyTarget: parseFloat(row[13]) || 0,
+                            achievedLeads: parseFloat(row[14]) || 0,
+                            achievementPct: parseFloat(row[15]) || 0
+                        });
                     }
                     
-                    // If we reached a blank row or new section, process the current section
-                    if ((i < allRows.length - 1 && allRows[i+1][0] === '') || i === allRows.length - 1) {
-                        if (currentSection === 'region' && sectionRows.length > 0) {
-                            regionData = sectionRows.map(row => ({
-                                region: row[0] || '',
-                                date: row[1] || '',
-                                dailyGoal: parseFloat(row[2]) || 0,
-                                achievedLeads: parseFloat(row[3]) || 0,
-                                achievementPct: parseFloat(row[4]) || 0,
-                                monthlyGoal: parseFloat(row[5]) || 0,
-                                monthlyAchieved: parseFloat(row[6]) || 0,
-                                monthlyPct: parseFloat(row[7]) || 0,
-                                totalCalls: parseFloat(row[8]) || 0,
-                                connectedCalls: parseFloat(row[9]) || 0,
-                                whatsapp: parseFloat(row[10]) || 0,
-                                emails: parseFloat(row[11]) || 0
-                            }));
-                        } else if (currentSection === 'agent' && sectionRows.length > 0) {
-                            agentData = sectionRows.map(row => ({
-                                srNo: row[0] || '',
-                                agent: row[1] || '',
-                                region: row[2] || '',
-                                totalCalls: parseFloat(row[3]) || 0,
-                                connectedCalls: parseFloat(row[4]) || 0,
-                                whatsapp: parseFloat(row[5]) || 0,
-                                emails: parseFloat(row[6]) || 0,
-                                selfProfiling: parseFloat(row[7]) || 0,
-                                week1: parseFloat(row[8]) || 0,
-                                week2: parseFloat(row[9]) || 0,
-                                week3: parseFloat(row[10]) || 0,
-                                week4: parseFloat(row[11]) || 0,
-                                week5: parseFloat(row[12]) || 0,
-                                monthlyTarget: parseFloat(row[13]) || 0,
-                                achievedLeads: parseFloat(row[14]) || 0,
-                                achievementPct: parseFloat(row[15]) || 0
-                            }));
-                        } else if (currentSection === 'city' && sectionRows.length > 0) {
-                            cityData = sectionRows.map(row => ({
-                                city: row[0] || '',
-                                country: row[1] || ''
-                            }));
-                        } else if (currentSection === 'config' && sectionRows.length > 0) {
-                            if (sectionRows[0] && sectionRows[0][0] === 'Monthly Goal (Total)') {
-                                configData.monthlyGoalTotal = parseFloat(sectionRows[0][1]) || 176;
-                            }
-                            if (sectionRows[1] && sectionRows[1][0] === 'Daily Goal per Region') {
-                                configData.dailyGoalPerRegion = parseFloat(sectionRows[1][1]) || 2;
-                            }
-                        }
-                        currentSection = null;
+                    // Detect City Data
+                    else if ((firstCol === 'Dubai' || firstCol === 'Abu Dhabi' || firstCol === 'Riyadh' || firstCol === 'Jeddah' || firstCol === 'Lahore' || firstCol === 'Karachi' || firstCol === 'Baghdad' || firstCol === 'Basra' || firstCol === 'Dammam' || firstCol === 'Sharjah') && row[1]) {
+                        cityData.push({
+                            city: row[0] || '',
+                            country: row[1] || ''
+                        });
+                    }
+                    
+                    // Detect Config Data
+                    else if (firstCol === 'Monthly Goal (Total)') {
+                        configData.monthlyGoalTotal = parseFloat(row[1]) || 176;
+                    }
+                    else if (firstCol === 'Daily Goal per Region') {
+                        configData.dailyGoalPerRegion = parseFloat(row[1]) || 2;
                     }
                 }
 
-                // Fallback: If no data was parsed, try direct detection from the CSV
-                if (regionData.length === 0 && agentData.length === 0 && cityData.length === 0) {
-                    console.log('Using fallback parsing...');
-                    for (let row of allRows) {
-                        if (row.length >= 12 && row[0] && (row[0] === 'Iraq' || row[0] === 'KSA' || row[0] === 'PAK' || row[0] === 'UAE' || row[0] === 'DG HP')) {
-                            regionData.push({
-                                region: row[0] || '',
-                                date: row[1] || '',
-                                dailyGoal: parseFloat(row[2]) || 0,
-                                achievedLeads: parseFloat(row[3]) || 0,
-                                achievementPct: parseFloat(row[4]) || 0,
-                                monthlyGoal: parseFloat(row[5]) || 0,
-                                monthlyAchieved: parseFloat(row[6]) || 0,
-                                monthlyPct: parseFloat(row[7]) || 0,
-                                totalCalls: parseFloat(row[8]) || 0,
-                                connectedCalls: parseFloat(row[9]) || 0,
-                                whatsapp: parseFloat(row[10]) || 0,
-                                emails: parseFloat(row[11]) || 0
-                            });
-                        } else if (row.length >= 16 && row[1] && (row[1] === 'Mehwish Noor' || row[1] === 'Azka Urooj' || row[1] === 'Sara Ahmed' || row[1] === 'Fatima Ali' || row[1] === 'Ayesha Khan')) {
-                            agentData.push({
-                                srNo: row[0] || '',
-                                agent: row[1] || '',
-                                region: row[2] || '',
-                                totalCalls: parseFloat(row[3]) || 0,
-                                connectedCalls: parseFloat(row[4]) || 0,
-                                whatsapp: parseFloat(row[5]) || 0,
-                                emails: parseFloat(row[6]) || 0,
-                                selfProfiling: parseFloat(row[7]) || 0,
-                                week1: parseFloat(row[8]) || 0,
-                                week2: parseFloat(row[9]) || 0,
-                                week3: parseFloat(row[10]) || 0,
-                                week4: parseFloat(row[11]) || 0,
-                                week5: parseFloat(row[12]) || 0,
-                                monthlyTarget: parseFloat(row[13]) || 0,
-                                achievedLeads: parseFloat(row[14]) || 0,
-                                achievementPct: parseFloat(row[15]) || 0
-                            });
-                        } else if (row.length >= 2 && row[0] && (row[0] === 'Dubai' || row[0] === 'Abu Dhabi' || row[0] === 'Riyadh' || row[0] === 'Lahore' || row[0] === 'Baghdad')) {
-                            cityData.push({
-                                city: row[0] || '',
-                                country: row[1] || ''
-                            });
-                        }
-                    }
-                }
-
-                console.log('Region data:', regionData.length, 'Agent data:', agentData.length, 'City data:', cityData.length);
+                console.log('Final - Region:', regionData.length, 'Agent:', agentData.length, 'City:', cityData.length);
+                console.log('Config:', configData);
                 
                 if (regionData.length === 0 && agentData.length === 0) {
                     throw new Error('No data found. Please check your Google Sheet format.');
@@ -587,15 +522,25 @@
             const endDate = document.getElementById('dateEnd').value;
 
             let filteredRegion = regionData;
-            if (selectedRegion !== 'all') filteredRegion = filteredRegion.filter(r => r.region === selectedRegion);
-            if (startDate && endDate) filteredRegion = filteredRegion.filter(r => r.date >= startDate && r.date <= endDate);
+            if (selectedRegion !== 'all') {
+                filteredRegion = filteredRegion.filter(r => r.region === selectedRegion);
+            }
+            if (startDate && endDate) {
+                filteredRegion = filteredRegion.filter(r => r.date >= startDate && r.date <= endDate);
+            }
 
             let filteredAgent = agentData;
-            if (selectedRegion !== 'all') filteredAgent = filteredAgent.filter(a => a.region === selectedRegion);
-            if (selectedAgent !== 'all') filteredAgent = filteredAgent.filter(a => a.agent === selectedAgent);
+            if (selectedRegion !== 'all') {
+                filteredAgent = filteredAgent.filter(a => a.region === selectedRegion);
+            }
+            if (selectedAgent !== 'all') {
+                filteredAgent = filteredAgent.filter(a => a.agent === selectedAgent);
+            }
 
             let filteredCity = cityData;
-            if (selectedCountry !== 'all') filteredCity = filteredCity.filter(c => c.country === selectedCountry);
+            if (selectedCountry !== 'all') {
+                filteredCity = filteredCity.filter(c => c.country === selectedCountry);
+            }
 
             return { region: filteredRegion, agent: filteredAgent, city: filteredCity };
         }
@@ -618,7 +563,7 @@
                 <div class="kpi-card"><h4>📞 Connection Rate</h4><div class="kpi-value">${connectionRate.toFixed(1)}%</div></div>
             `;
 
-            // Region chart
+            // Region Chart
             if (charts.region) charts.region.destroy();
             if (filtered.region.length > 0) {
                 charts.region = new Chart(document.getElementById('regionChart'), {
@@ -629,13 +574,21 @@
                             { label: 'Monthly Goal', data: filtered.region.map(r => r.monthlyGoal), backgroundColor: 'rgba(160, 90, 255, 0.6)' },
                             { label: 'Achieved', data: filtered.region.map(r => r.monthlyAchieved), backgroundColor: 'rgba(27, 207, 180, 0.6)' }
                         ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.raw; } } }
+                        }
                     }
                 });
             }
 
-            // City chart
+            // City Chart
             const countryCounts = {};
-            filtered.city.forEach(c => countryCounts[c.country] = (countryCounts[c.country] || 0) + 1);
+            filtered.city.forEach(c => { countryCounts[c.country] = (countryCounts[c.country] || 0) + 1; });
             if (charts.city) charts.city.destroy();
             if (Object.keys(countryCounts).length > 0) {
                 charts.city = new Chart(document.getElementById('cityChart'), {
@@ -643,11 +596,19 @@
                     data: {
                         labels: Object.keys(countryCounts),
                         datasets: [{ data: Object.values(countryCounts), backgroundColor: ['#A05AFF', '#1BCFB4', '#FE9496', '#4BCBEB'] }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { position: 'right' },
+                            tooltip: { callbacks: { label: function(context) { return context.label + ': ' + context.raw + ' cities'; } } }
+                        }
                     }
                 });
             }
 
-            // Channel chart
+            // Channel Chart
             const totalWhatsapp = filtered.agent.reduce((sum, a) => sum + a.whatsapp, 0);
             const totalEmails = filtered.agent.reduce((sum, a) => sum + a.emails, 0);
             if (charts.channel) charts.channel.destroy();
@@ -655,37 +616,52 @@
                 type: 'bar',
                 data: {
                     labels: ['Connected Calls', 'WhatsApp', 'Emails'],
-                    datasets: [{ data: [totalConnected, totalWhatsapp, totalEmails], backgroundColor: '#A05AFF' }]
+                    datasets: [{ 
+                        label: 'Count', 
+                        data: [totalConnected, totalWhatsapp, totalEmails], 
+                        backgroundColor: '#A05AFF',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: function(context) { return context.raw.toLocaleString(); } } }
+                    }
                 }
             });
 
-            // Agent table
+            // Agent Table
             const headers = ['Agent', 'Region', 'Total Calls', 'Connected', 'WhatsApp', 'Emails', 'Week 1-5 Leads', 'Monthly Target', 'Achieved', 'Achievement %'];
-            document.getElementById('agentTableHead').innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}`;
+            document.getElementById('agentTableHead').innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
             document.getElementById('agentTableBody').innerHTML = filtered.agent.map(a => {
                 const weeklyTotal = a.week1 + a.week2 + a.week3 + a.week4 + a.week5;
                 const achClass = a.achievementPct >= 80 ? 'achievement-high' : (a.achievementPct >= 50 ? '' : 'achievement-low');
                 return `<tr>
-                    <td>${a.agent} \n
-                    <td>${a.region} \n
-                    <td>${a.totalCalls} \n
-                    <td>${a.connectedCalls} \n
-                    <td>${a.whatsapp} \n
-                    <td>${a.emails} \n
-                    <td>${weeklyTotal} \n
-                    <td>${a.monthlyTarget} \n
-                    <td>${a.achievedLeads} \n
-                    <td class="${achClass}">${a.achievementPct.toFixed(1)}% \n
-                `;
+                    <td>${a.agent}</td>
+                    <td>${a.region}</td>
+                    <td>${a.totalCalls}</td>
+                    <td>${a.connectedCalls}</td>
+                    <td>${a.whatsapp}</td>
+                    <td>${a.emails}</td>
+                    <td>${weeklyTotal}</td>
+                    <td>${a.monthlyTarget}</td>
+                    <td>${a.achievedLeads}</td>
+                    <td class="${achClass}">${a.achievementPct.toFixed(1)}%</td>
+                </tr>`;
             }).join('');
         }
 
+        // Event Listeners
         document.getElementById('filterRegion').addEventListener('change', updateDashboard);
         document.getElementById('filterAgent').addEventListener('change', updateDashboard);
         document.getElementById('filterCity').addEventListener('change', updateDashboard);
         document.getElementById('dateStart').addEventListener('change', updateDashboard);
         document.getElementById('dateEnd').addEventListener('change', updateDashboard);
 
+        // Load on page load
         window.onload = () => {
             loadAllData();
         };
