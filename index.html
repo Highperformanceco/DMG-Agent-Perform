@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Monthly Performance Dashboard | Regional Sales Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: #eef2f5; padding: 20px; min-height: 100vh; }
@@ -70,6 +71,9 @@
         <div class="footer"><p>Data refreshes from Google Sheets | Last sync: <span id="syncTime">—</span></p></div>
     </div>
     <script>
+        // Register datalabels plugin
+        Chart.register(ChartDataLabels);
+        
         // ==================== CONFIGURATION ====================
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz32sowAxDQosCoO29lMhBVRNFuC1_qpaMh_Y_fJ0YTSAvPAfov7MdTAARzGyV3mHQ72A/exec';
         
@@ -108,7 +112,6 @@
             try{
                 document.getElementById('lastUpdated').innerHTML='🔄 Loading...';
                 
-                // Fetch all tabs in parallel
                 const [regionCSV, agentCSV, cityCSV, configCSV] = await Promise.all([
                     fetchCSV(CSV_URLS.region),
                     fetchCSV(CSV_URLS.agent),
@@ -158,7 +161,7 @@
                     }));
                 }
                 
-                // Parse City Data - get actual city names
+                // Parse City Data
                 const cityRows = parseCSV(cityCSV);
                 if(cityRows.length > 1){
                     cityData = cityRows.slice(1).map(row => ({
@@ -194,7 +197,6 @@
         function updateFilters(){
             const regions=[...new Set(regionData.map(r=>r.region).filter(r=>r))];
             const agents=[...new Set(agentData.map(a=>a.agent).filter(a=>a))];
-            // FIXED: Show actual city names, not countries
             const cities=[...new Set(cityData.map(c=>c.city).filter(c=>c))];
             
             const rs=document.getElementById('filterRegion'); rs.innerHTML='<option value="all">All Regions</option>'; regions.forEach(r=>rs.innerHTML+=`<option value="${r}">${r}</option>`);
@@ -203,12 +205,25 @@
         }
         
         function getFilteredData(){
-            const sr=document.getElementById('filterRegion').value, sa=document.getElementById('filterAgent').value, sc=document.getElementById('filterCity').value;
-            const sd=document.getElementById('dateStart').value, ed=document.getElementById('dateEnd').value;
-            let fr=regionData; if(sr!=='all') fr=fr.filter(r=>r.region===sr); if(sd&&ed) fr=fr.filter(r=>r.date>=sd && r.date<=ed);
-            let fa=agentData; if(sr!=='all') fa=fa.filter(a=>a.region===sr); if(sa!=='all') fa=fa.filter(a=>a.agent===sa);
-            // FIXED: Filter by city name, not country
-            let fc=cityData; if(sc!=='all') fc=fc.filter(c=>c.city===sc);
+            const sr=document.getElementById('filterRegion').value;
+            const sa=document.getElementById('filterAgent').value;
+            const sc=document.getElementById('filterCity').value;
+            const sd=document.getElementById('dateStart').value;
+            const ed=document.getElementById('dateEnd').value;
+            
+            let fr=regionData; 
+            if(sr!=='all') fr=fr.filter(r=>r.region===sr); 
+            if(sd&&ed) fr=fr.filter(r=>r.date>=sd && r.date<=ed);
+            
+            let fa=agentData; 
+            if(sr!=='all') fa=fa.filter(a=>a.region===sr); 
+            if(sa!=='all') fa=fa.filter(a=>a.agent===sa);
+            
+            // FIXED: Filter cities based on selected region
+            let fc=cityData;
+            if(sr!=='all') fc=fc.filter(c=>c.country===sr);
+            if(sc!=='all') fc=fc.filter(c=>c.city===sc);
+            
             return { region:fr, agent:fa, city:fc };
         }
         
@@ -240,45 +255,71 @@
                         plugins: {
                             tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.raw.toLocaleString(); } } },
                             legend: { position: 'top' },
-                            datalabels: { display: false }
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                offset: 4,
+                                formatter: (value) => value.toLocaleString(),
+                                font: { weight: 'bold', size: 11 },
+                                color: '#2d3a45'
+                            }
                         }
                     }
                 });
             }
             
-            // City Chart - show actual city names with data labels
+            // City Chart - shows cities from selected region only, with data labels
             const cityCounts = {};
             f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
             
             if(charts.city) charts.city.destroy();
             if(Object.keys(cityCounts).length){
-                // Register datalabels plugin dynamically
-                if(typeof Chart !== 'undefined' && !Chart.helpers?.plugins?.datalabels){
-                    // Use built-in tooltip for labels instead of external plugin
-                    charts.city = new Chart(document.getElementById('cityChart'), {
-                        type: 'pie',
-                        data: {
-                            labels: Object.keys(cityCounts),
-                            datasets: [{ 
-                                data: Object.values(cityCounts), 
-                                backgroundColor: ['#A05AFF', '#1BCFB4', '#FE9496', '#4BCBEB', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'],
-                                borderWidth: 0,
-                                hoverOffset: 10
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: true,
-                            plugins: {
-                                tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.raw + ' city(s)'; } } },
-                                legend: { position: 'right', labels: { font: { size: 11 } } }
+                charts.city = new Chart(document.getElementById('cityChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: Object.keys(cityCounts),
+                        datasets: [{ 
+                            data: Object.values(cityCounts), 
+                            backgroundColor: ['#A05AFF', '#1BCFB4', '#FE9496', '#4BCBEB', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'],
+                            borderWidth: 0,
+                            hoverOffset: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.raw + ' city(s)'; } } },
+                            legend: { position: 'right', labels: { font: { size: 11 } } },
+                            datalabels: {
+                                formatter: (value, ctx) => {
+                                    const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${value} (${percentage}%)`;
+                                },
+                                color: '#fff',
+                                font: { weight: 'bold', size: 12 },
+                                backgroundColor: 'rgba(0,0,0,0.6)',
+                                borderRadius: 4,
+                                padding: { left: 6, right: 6, top: 2, bottom: 2 },
+                                align: 'center',
+                                anchor: 'center',
+                                offset: 0
                             }
                         }
-                    });
-                }
+                    }
+                });
+            } else {
+                // Show message when no cities for selected region
+                document.getElementById('cityChart').getContext('2d').clearRect(0, 0, 400, 300);
+                const ctx = document.getElementById('cityChart').getContext('2d');
+                ctx.font = '14px Segoe UI';
+                ctx.fillStyle = '#94a3b8';
+                ctx.textAlign = 'center';
+                ctx.fillText('No cities found for selected region', 200, 150);
             }
             
-            // Channel Chart with data labels on bars
+            // Channel Chart with data labels
             const totalWhatsapp=f.agent.reduce((s,a)=>s+a.whatsapp,0);
             const totalEmails=f.agent.reduce((s,a)=>s+a.emails,0);
             if(charts.channel) charts.channel.destroy();
@@ -298,7 +339,15 @@
                     maintainAspectRatio: true,
                     plugins: {
                         tooltip: { callbacks: { label: function(ctx) { return ctx.raw.toLocaleString(); } } },
-                        legend: { display: false }
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            offset: 4,
+                            formatter: (value) => value.toLocaleString(),
+                            font: { weight: 'bold', size: 11 },
+                            color: '#2d3a45'
+                        }
                     },
                     scales: {
                         y: { beginAtZero: true, title: { display: true, text: 'Count', font: { weight: 'bold' } } },
@@ -317,11 +366,11 @@
             }).join('');
         }
         
-        document.getElementById('filterRegion').addEventListener('change',updateDashboard);
-        document.getElementById('filterAgent').addEventListener('change',updateDashboard);
-        document.getElementById('filterCity').addEventListener('change',updateDashboard);
-        document.getElementById('dateStart').addEventListener('change',updateDashboard);
-        document.getElementById('dateEnd').addEventListener('change',updateDashboard);
+        document.getElementById('filterRegion').addEventListener('change', updateDashboard);
+        document.getElementById('filterAgent').addEventListener('change', updateDashboard);
+        document.getElementById('filterCity').addEventListener('change', updateDashboard);
+        document.getElementById('dateStart').addEventListener('change', updateDashboard);
+        document.getElementById('dateEnd').addEventListener('change', updateDashboard);
         window.onload=()=>loadAllData();
     </script>
 </body>
