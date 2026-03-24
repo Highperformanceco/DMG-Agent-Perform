@@ -264,35 +264,6 @@
             color: #64748b;
             font-size: 0.9em;
         }
-
-        /* Loading overlay for charts */
-        .loading-overlay {
-            position: relative;
-            min-height: 200px;
-        }
-
-        .loading-placeholder {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 16px;
-            z-index: 10;
-        }
-
-        .loader {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #e2e8f0;
-            border-top-color: #A05AFF;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
     </style>
 </head>
 <body>
@@ -376,7 +347,7 @@
     <script>
         // ==================== CONFIGURATION ====================
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyEzlTMkzJlmzbQJ17mqg-eCoc4qiRfl0sC0y2QqbArLsboYKBaqtAAP7_3sSSZOEAT/exec';
-        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTcPsiXS7-q15p88s_HhOJKewDWwnOzk0_UMO3Y6Js-FrIYGAMfh0b_YX3pViJl5ZFEK-JJW8LfPj7Y/pub?output=csv';
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxl3KDZ4k7rNc2Auy9iynlEuXEwjkFiSilwrseOxcH3JLTIsDhE0iWQlGuB0CIgfh_b4IRL3Qfz9Z5/pub?output=csv';
         // ======================================================
 
         let regionData = [];
@@ -616,9 +587,16 @@
                 const weeklyTotal = a.week1 + a.week2 + a.week3 + a.week4 + a.week5;
                 const achClass = a.achievementPct >= 80 ? 'achievement-high' : (a.achievementPct >= 50 ? '' : 'achievement-low');
                 return `<tr>
-                    <td>${a.agent}</td><td>${a.region}</td><td>${a.totalCalls}</td><td>${a.connectedCalls}</td>
-                    <td>${a.whatsapp}</td><td>${a.emails}</td><td>${weeklyTotal}</td><td>${a.monthlyTarget}</td>
-                    <td>${a.achievedLeads}</td><td class="${achClass}">${a.achievementPct.toFixed(1)}%</td>
+                    <td>${a.agent}</td>
+                    <td>${a.region}</td>
+                    <td>${a.totalCalls}</td>
+                    <td>${a.connectedCalls}</td>
+                    <td>${a.whatsapp}</td>
+                    <td>${a.emails}</td>
+                    <td>${weeklyTotal}</td>
+                    <td>${a.monthlyTarget}</td>
+                    <td>${a.achievedLeads}</td>
+                    <td class="${achClass}">${a.achievementPct.toFixed(1)}%</td>
                 </tr>`;
             }).join('');
         }
