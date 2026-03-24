@@ -57,13 +57,13 @@
         <div class="filters">
             <div class="filter-group"><label>Region</label><select id="filterRegion"><option value="all">All Regions</option></select></div>
             <div class="filter-group"><label>Agent</label><select id="filterAgent"><option value="all">All Agents</option></select></div>
-            <div class="filter-group"><label>City / Country</label><select id="filterCity"><option value="all">All Countries</option></select></div>
+            <div class="filter-group"><label>City</label><select id="filterCity"><option value="all">All Cities</option></select></div>
             <div class="filter-group"><label>Date Range (Start)</label><input type="date" id="dateStart"></div>
             <div class="filter-group"><label>Date Range (End)</label><input type="date" id="dateEnd"></div>
         </div>
         <div id="dashboardContent">
             <div class="kpi-grid" id="kpiGrid"><div class="kpi-card"><h4>📅 Monthly Goal</h4><div class="kpi-value">—</div></div><div class="kpi-card"><h4>✅ Achieved Leads</h4><div class="kpi-value">—</div></div><div class="kpi-card"><h4>🎯 Achievement %</h4><div class="kpi-value">—</div></div><div class="kpi-card"><h4>📞 Total Calls</h4><div class="kpi-value">—</div></div><div class="kpi-card"><h4>📞 Connection Rate</h4><div class="kpi-value">—</div></div></div>
-            <div class="charts-row"><div class="chart-card"><h3>📊 Region-wise: Monthly Goal vs Achieved</h3><canvas id="regionChart"></canvas></div><div class="chart-card"><h3>🌍 City / Country Distribution</h3><canvas id="cityChart"></canvas></div></div>
+            <div class="charts-row"><div class="chart-card"><h3>📊 Region-wise: Monthly Goal vs Achieved</h3><canvas id="regionChart"></canvas></div><div class="chart-card"><h3>🌍 City Distribution</h3><canvas id="cityChart"></canvas></div></div>
             <div class="chart-card" style="margin-bottom: 25px;"><h3>📞 Communication Channel Performance</h3><canvas id="channelChart" style="max-height: 250px;"></canvas></div>
             <div class="table-container"><h3>👥 Agent-wise Detailed Performance</h3><div style="overflow-x: auto;"><table id="agentTable"><thead id="agentTableHead"></thead><tbody id="agentTableBody"></tbody>}</div></div>
         </div>
@@ -119,7 +119,6 @@
                 // Parse Region Data
                 const regionRows = parseCSV(regionCSV);
                 if(regionRows.length > 1){
-                    const headers = regionRows[0];
                     regionData = regionRows.slice(1).map(row => ({
                         region: row[0] || '',
                         date: row[1] || '',
@@ -159,7 +158,7 @@
                     }));
                 }
                 
-                // Parse City Data
+                // Parse City Data - get actual city names
                 const cityRows = parseCSV(cityCSV);
                 if(cityRows.length > 1){
                     cityData = cityRows.slice(1).map(row => ({
@@ -195,10 +194,12 @@
         function updateFilters(){
             const regions=[...new Set(regionData.map(r=>r.region).filter(r=>r))];
             const agents=[...new Set(agentData.map(a=>a.agent).filter(a=>a))];
-            const countries=[...new Set(cityData.map(c=>c.country).filter(c=>c))];
+            // FIXED: Show actual city names, not countries
+            const cities=[...new Set(cityData.map(c=>c.city).filter(c=>c))];
+            
             const rs=document.getElementById('filterRegion'); rs.innerHTML='<option value="all">All Regions</option>'; regions.forEach(r=>rs.innerHTML+=`<option value="${r}">${r}</option>`);
             const as=document.getElementById('filterAgent'); as.innerHTML='<option value="all">All Agents</option>'; agents.forEach(a=>as.innerHTML+=`<option value="${a}">${a}</option>`);
-            const cs=document.getElementById('filterCity'); cs.innerHTML='<option value="all">All Countries</option>'; countries.forEach(c=>cs.innerHTML+=`<option value="${c}">${c}</option>`);
+            const cs=document.getElementById('filterCity'); cs.innerHTML='<option value="all">All Cities</option>'; cities.forEach(c=>cs.innerHTML+=`<option value="${c}">${c}</option>`);
         }
         
         function getFilteredData(){
@@ -206,7 +207,8 @@
             const sd=document.getElementById('dateStart').value, ed=document.getElementById('dateEnd').value;
             let fr=regionData; if(sr!=='all') fr=fr.filter(r=>r.region===sr); if(sd&&ed) fr=fr.filter(r=>r.date>=sd && r.date<=ed);
             let fa=agentData; if(sr!=='all') fa=fa.filter(a=>a.region===sr); if(sa!=='all') fa=fa.filter(a=>a.agent===sa);
-            let fc=cityData; if(sc!=='all') fc=fc.filter(c=>c.country===sc);
+            // FIXED: Filter by city name, not country
+            let fc=cityData; if(sc!=='all') fc=fc.filter(c=>c.city===sc);
             return { region:fr, agent:fa, city:fc };
         }
         
@@ -220,21 +222,99 @@
             const connRate=totalCalls>0?(totalConnected/totalCalls)*100:0;
             document.getElementById('kpiGrid').innerHTML=`<div class="kpi-card"><h4>📅 Monthly Goal</h4><div class="kpi-value">${totalGoal}</div></div><div class="kpi-card"><h4>✅ Achieved Leads</h4><div class="kpi-value">${totalAchieved}</div></div><div class="kpi-card"><h4>🎯 Achievement %</h4><div class="kpi-value">${overallAch.toFixed(1)}%</div></div><div class="kpi-card"><h4>📞 Total Calls</h4><div class="kpi-value">${totalCalls}</div></div><div class="kpi-card"><h4>📞 Connection Rate</h4><div class="kpi-value">${connRate.toFixed(1)}%</div></div>`;
             
+            // Region Chart with data labels
             if(charts.region) charts.region.destroy();
-            if(f.region.length) charts.region=new Chart(document.getElementById('regionChart'),{type:'bar',data:{labels:f.region.map(r=>r.region),datasets:[{label:'Monthly Goal',data:f.region.map(r=>r.monthlyGoal),backgroundColor:'rgba(160,90,255,0.6)'},{label:'Achieved',data:f.region.map(r=>r.monthlyAchieved),backgroundColor:'rgba(27,207,180,0.6)'}]}});
+            if(f.region.length){
+                charts.region = new Chart(document.getElementById('regionChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: f.region.map(r=>r.region),
+                        datasets: [
+                            { label: 'Monthly Goal', data: f.region.map(r=>r.monthlyGoal), backgroundColor: 'rgba(160,90,255,0.6)', borderRadius: 8 },
+                            { label: 'Achieved', data: f.region.map(r=>r.monthlyAchieved), backgroundColor: 'rgba(27,207,180,0.6)', borderRadius: 8 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.raw.toLocaleString(); } } },
+                            legend: { position: 'top' },
+                            datalabels: { display: false }
+                        }
+                    }
+                });
+            }
             
-            const counts={}; f.city.forEach(c=>counts[c.country]=(counts[c.country]||0)+1);
+            // City Chart - show actual city names with data labels
+            const cityCounts = {};
+            f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
+            
             if(charts.city) charts.city.destroy();
-            if(Object.keys(counts).length) charts.city=new Chart(document.getElementById('cityChart'),{type:'pie',data:{labels:Object.keys(counts),datasets:[{data:Object.values(counts),backgroundColor:['#A05AFF','#1BCFB4','#FE9496','#4BCBEB']}]}});
+            if(Object.keys(cityCounts).length){
+                // Register datalabels plugin dynamically
+                if(typeof Chart !== 'undefined' && !Chart.helpers?.plugins?.datalabels){
+                    // Use built-in tooltip for labels instead of external plugin
+                    charts.city = new Chart(document.getElementById('cityChart'), {
+                        type: 'pie',
+                        data: {
+                            labels: Object.keys(cityCounts),
+                            datasets: [{ 
+                                data: Object.values(cityCounts), 
+                                backgroundColor: ['#A05AFF', '#1BCFB4', '#FE9496', '#4BCBEB', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'],
+                                borderWidth: 0,
+                                hoverOffset: 10
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.raw + ' city(s)'; } } },
+                                legend: { position: 'right', labels: { font: { size: 11 } } }
+                            }
+                        }
+                    });
+                }
+            }
             
+            // Channel Chart with data labels on bars
             const totalWhatsapp=f.agent.reduce((s,a)=>s+a.whatsapp,0);
             const totalEmails=f.agent.reduce((s,a)=>s+a.emails,0);
             if(charts.channel) charts.channel.destroy();
-            charts.channel=new Chart(document.getElementById('channelChart'),{type:'bar',data:{labels:['Connected Calls','WhatsApp','Emails'],datasets:[{data:[totalConnected,totalWhatsapp,totalEmails],backgroundColor:'#A05AFF',borderRadius:8}]}});
+            charts.channel = new Chart(document.getElementById('channelChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Connected Calls', 'WhatsApp', 'Emails'],
+                    datasets: [{ 
+                        data: [totalConnected, totalWhatsapp, totalEmails], 
+                        backgroundColor: '#A05AFF',
+                        borderRadius: 8,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        tooltip: { callbacks: { label: function(ctx) { return ctx.raw.toLocaleString(); } } },
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count', font: { weight: 'bold' } } },
+                        x: { title: { display: true, text: 'Channel', font: { weight: 'bold' } } }
+                    }
+                }
+            });
             
+            // Agent table
             const headers=['Agent','Region','Total Calls','Connected','WhatsApp','Emails','Week 1-5 Leads','Monthly Target','Achieved','Achievement %'];
             document.getElementById('agentTableHead').innerHTML=`<tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr>`;
-            document.getElementById('agentTableBody').innerHTML=f.agent.map(a=>{const weekly=a.week1+a.week2+a.week3+a.week4+a.week5; const cls=a.achievementPct>=80?'achievement-high':(a.achievementPct>=50?'':'achievement-low'); return `<tr><td>${a.agent}</td><td>${a.region}</td><td>${a.totalCalls}</td><td>${a.connectedCalls}</td><td>${a.whatsapp}</td><td>${a.emails}</td><td>${weekly}</td><td>${a.monthlyTarget}</td><td>${a.achievedLeads}</td><td class="${cls}">${a.achievementPct.toFixed(1)}%</td></tr>`;}).join('');
+            document.getElementById('agentTableBody').innerHTML=f.agent.map(a=>{
+                const weekly=a.week1+a.week2+a.week3+a.week4+a.week5;
+                const cls=a.achievementPct>=80?'achievement-high':(a.achievementPct>=50?'':'achievement-low');
+                return `<tr><td>${a.agent}</td><td>${a.region}</td><td>${a.totalCalls}</td><td>${a.connectedCalls}</td><td>${a.whatsapp}</td><td>${a.emails}</td><td>${weekly}</td><td>${a.monthlyTarget}</td><td>${a.achievedLeads}</td><td class="${cls}">${a.achievementPct.toFixed(1)}%</td></tr>`;
+            }).join('');
         }
         
         document.getElementById('filterRegion').addEventListener('change',updateDashboard);
