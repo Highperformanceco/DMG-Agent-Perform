@@ -346,7 +346,8 @@
 
     <script>
         // ==================== CONFIGURATION ====================
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyY-pzd2XXY2b0VKxG_OHraAct9lqcW8bBPyXK7_Ddj-hotPjMkgZnoRc7RAuev4nqLkw/exec';
+        // IMPORTANT: Replace this with your latest Apps Script URL after redeploying
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz32sowAxDQosCoO29lMhBVRNFuC1_qpaMh_Y_fJ0YTSAvPAfov7MdTAARzGyV3mHQ72A/exec';
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxl3KDZ4k7rNc2Auy9iynlEuXEwjkFiSilwrseOxcH3JLTIsDhE0iWQlGuB0CIgfh_b4IRL3Qfz9Z5/pub?output=csv';
         // ======================================================
 
@@ -380,6 +381,7 @@
         async function fetchCSV() {
             const cacheBuster = '&_=' + new Date().getTime();
             const fullUrl = APPS_SCRIPT_URL + '?url=' + encodeURIComponent(CSV_URL + cacheBuster);
+            console.log('Fetching:', fullUrl);
             const response = await fetch(fullUrl);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return await response.text();
@@ -411,7 +413,10 @@
             try {
                 document.getElementById('lastUpdated').innerHTML = '🔄 Loading...';
                 const csvText = await fetchCSV();
+                console.log('CSV loaded, length:', csvText.length);
+                
                 const allRows = parseCSV(csvText);
+                console.log('Parsed rows:', allRows.length);
 
                 let tabs = [];
                 let currentTab = [];
@@ -424,10 +429,13 @@
                     }
                 }
                 if (currentTab.length) tabs.push(currentTab);
+                console.log('Tabs detected:', tabs.length);
 
                 for (let tab of tabs) {
                     const type = detectTab(tab);
                     const rows = tab.slice(1);
+                    console.log('Tab type:', type, 'rows:', rows.length);
+                    
                     if (type === 'region_summary') {
                         regionData = rows.map(row => ({
                             region: row[0] || '',
@@ -473,12 +481,13 @@
                     }
                 }
 
+                console.log('Region data:', regionData.length, 'Agent data:', agentData.length, 'City data:', cityData.length);
                 updateFilters();
                 updateDashboard();
                 document.getElementById('lastUpdated').innerHTML = `✅ Updated: ${new Date().toLocaleString()}`;
                 document.getElementById('syncTime').innerHTML = new Date().toLocaleString();
             } catch (err) {
-                console.error(err);
+                console.error('Error:', err);
                 showError('Failed to load data: ' + err.message);
                 document.getElementById('lastUpdated').innerHTML = '❌ Error loading data';
             } finally {
@@ -545,28 +554,32 @@
 
             // Region chart
             if (charts.region) charts.region.destroy();
-            charts.region = new Chart(document.getElementById('regionChart'), {
-                type: 'bar',
-                data: {
-                    labels: filtered.region.map(r => r.region),
-                    datasets: [
-                        { label: 'Monthly Goal', data: filtered.region.map(r => r.monthlyGoal), backgroundColor: 'rgba(160, 90, 255, 0.6)' },
-                        { label: 'Achieved', data: filtered.region.map(r => r.monthlyAchieved), backgroundColor: 'rgba(27, 207, 180, 0.6)' }
-                    ]
-                }
-            });
+            if (filtered.region.length > 0) {
+                charts.region = new Chart(document.getElementById('regionChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: filtered.region.map(r => r.region),
+                        datasets: [
+                            { label: 'Monthly Goal', data: filtered.region.map(r => r.monthlyGoal), backgroundColor: 'rgba(160, 90, 255, 0.6)' },
+                            { label: 'Achieved', data: filtered.region.map(r => r.monthlyAchieved), backgroundColor: 'rgba(27, 207, 180, 0.6)' }
+                        ]
+                    }
+                });
+            }
 
             // City chart
             const countryCounts = {};
             filtered.city.forEach(c => countryCounts[c.country] = (countryCounts[c.country] || 0) + 1);
             if (charts.city) charts.city.destroy();
-            charts.city = new Chart(document.getElementById('cityChart'), {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(countryCounts),
-                    datasets: [{ data: Object.values(countryCounts), backgroundColor: ['#A05AFF', '#1BCFB4', '#FE9496', '#4BCBEB'] }]
-                }
-            });
+            if (Object.keys(countryCounts).length > 0) {
+                charts.city = new Chart(document.getElementById('cityChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: Object.keys(countryCounts),
+                        datasets: [{ data: Object.values(countryCounts), backgroundColor: ['#A05AFF', '#1BCFB4', '#FE9496', '#4BCBEB'] }]
+                    }
+                });
+            }
 
             // Channel chart
             const totalWhatsapp = filtered.agent.reduce((sum, a) => sum + a.whatsapp, 0);
