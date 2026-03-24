@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Debug Test - Check Data Loading</h1>
+    <button onclick="testFetch()">Test Fetch</button>
+    <pre id="output">Click button to test...</pre>
+
+    <script>
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUtwOWQIfXhKj5NYVrWtsjMGNCyqTWHQG-v5BsVXKVKzJTtWtssrAGXuQmwv90JYXj/exec';
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxl3KDZ4k7rNc2Auy9iynlEuXEwjkFiSilwrseOxcH3JLTIsDhE0iWQlGuB0CIgfh_b4IRL3Qfz9Z5/pub?output=csv';
+
+        async function testFetch() {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Loading...';
+            
+            try {
+                const fullUrl = APPS_SCRIPT_URL + '?url=' + encodeURIComponent(CSV_URL);
+                output.innerHTML = 'Fetching: ' + fullUrl + '\n\n';
+                
+                const response = await fetch(fullUrl);
+                output.innerHTML += 'Response status: ' + response.status + '\n';
+                output.innerHTML += 'Response ok: ' + response.ok + '\n\n';
+                
+                const text = await response.text();
+                output.innerHTML += 'First 500 characters of response:\n\n' + text.substring(0, 500);
+                
+            } catch (err) {
+                output.innerHTML += 'ERROR: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>
