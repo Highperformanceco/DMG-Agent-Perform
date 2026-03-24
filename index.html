@@ -32,13 +32,17 @@
             margin-bottom: 25px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             border: 1px solid rgba(160, 90, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .header h1 {
             color: #2d3a45;
             font-size: 1.8em;
             font-weight: 600;
-            margin-bottom: 15px;
         }
 
         .header h1 span {
@@ -51,23 +55,16 @@
             font-weight: 500;
         }
 
-        .sheet-url-input {
+        .refresh-area {
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
         }
 
-        .sheet-url-input input {
-            flex: 1;
-            padding: 10px 15px;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 0.85em;
-            background: white;
-        }
-
-        .btn-refresh, .btn-export {
+        .btn-refresh {
+            background: #A05AFF;
+            color: white;
+            border: none;
             padding: 10px 20px;
             border-radius: 12px;
             font-size: 0.9em;
@@ -77,12 +74,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            border: none;
-        }
-
-        .btn-refresh {
-            background: #A05AFF;
-            color: white;
         }
 
         .btn-refresh:hover {
@@ -90,20 +81,29 @@
             transform: translateY(-2px);
         }
 
-        .btn-export {
-            background: #1BCFB4;
-            color: white;
+        .btn-refresh:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
-        .btn-export:hover {
-            background: #0F9F8A;
-            transform: translateY(-2px);
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         .last-updated {
             color: #64748b;
             font-size: 0.8em;
-            margin-top: 10px;
         }
 
         .filters {
@@ -264,18 +264,47 @@
             color: #64748b;
             font-size: 0.9em;
         }
+
+        /* Loading overlay for charts */
+        .loading-overlay {
+            position: relative;
+            min-height: 200px;
+        }
+
+        .loading-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            z-index: 10;
+        }
+
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #A05AFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>📊 Monthly Performance Dashboard <span>Regional Tracker</span></h1>
-            <div class="sheet-url-input">
-                <input type="text" id="sheetUrl" placeholder="Google Sheets CSV URL" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTcPsiXS7-q15p88s_HhOJKewDWwnOzk0_UMO3Y6Js-FrIYGAMfh0b_YX3pViJl5ZFEK-JJW8LfPj7Y/pub?output=csv">
-                <button class="btn-refresh" onclick="loadAllData()">🔄 Load Data</button>
-                <button class="btn-export" onclick="exportToCSV()">📎 Export to CSV</button>
+            <div class="refresh-area">
+                <div class="last-updated" id="lastUpdated"></div>
+                <button class="btn-refresh" id="refreshBtn" onclick="loadAllData()">
+                    🔄 Refresh
+                </button>
             </div>
-            <div class="last-updated" id="lastUpdated"></div>
         </div>
 
         <div id="errorMessage" class="error-message"></div>
@@ -303,43 +332,51 @@
             </div>
         </div>
 
-        <div class="kpi-grid" id="kpiGrid"></div>
-
-        <div class="charts-row">
-            <div class="chart-card">
-                <h3>📊 Region-wise: Monthly Goal vs Achieved</h3>
-                <canvas id="regionChart"></canvas>
+        <div id="dashboardContent">
+            <div class="kpi-grid" id="kpiGrid">
+                <div class="kpi-card"><h4>📅 Monthly Goal</h4><div class="kpi-value">—</div></div>
+                <div class="kpi-card"><h4>✅ Achieved Leads</h4><div class="kpi-value">—</div></div>
+                <div class="kpi-card"><h4>🎯 Achievement %</h4><div class="kpi-value">—</div></div>
+                <div class="kpi-card"><h4>📞 Total Calls</h4><div class="kpi-value">—</div></div>
+                <div class="kpi-card"><h4>📞 Connection Rate</h4><div class="kpi-value">—</div></div>
             </div>
-            <div class="chart-card">
-                <h3>🌍 City / Country Distribution</h3>
-                <canvas id="cityChart"></canvas>
+
+            <div class="charts-row">
+                <div class="chart-card">
+                    <h3>📊 Region-wise: Monthly Goal vs Achieved</h3>
+                    <canvas id="regionChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>🌍 City / Country Distribution</h3>
+                    <canvas id="cityChart"></canvas>
+                </div>
             </div>
-        </div>
 
-        <div class="chart-card" style="margin-bottom: 25px;">
-            <h3>📞 Communication Channel Performance</h3>
-            <canvas id="channelChart" style="max-height: 250px;"></canvas>
-        </div>
+            <div class="chart-card" style="margin-bottom: 25px;">
+                <h3>📞 Communication Channel Performance</h3>
+                <canvas id="channelChart" style="max-height: 250px;"></canvas>
+            </div>
 
-        <div class="table-container">
-            <h3>👥 Agent-wise Detailed Performance</h3>
-            <div style="overflow-x: auto;">
-                <table id="agentTable">
-                    <thead id="agentTableHead"></thead>
-                    <tbody id="agentTableBody"></tbody>
-                </table>
+            <div class="table-container">
+                <h3>👥 Agent-wise Detailed Performance</h3>
+                <div style="overflow-x: auto;">
+                    <table id="agentTable">
+                        <thead id="agentTableHead"></thead>
+                        <tbody id="agentTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div class="footer">
-            <p>Data refreshes automatically from Google Sheets | Last sync: <span id="syncTime">—</span></p>
+            <p>Data refreshes from Google Sheets | Last sync: <span id="syncTime">—</span></p>
         </div>
     </div>
 
     <script>
         // ==================== CONFIGURATION ====================
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyEzlTMkzJlmzbQJ17mqg-eCoc4qiRfl0sC0y2QqbArLsboYKBaqtAAP7_3sSSZOEAT/exec';
-        const DEFAULT_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTcPsiXS7-q15p88s_HhOJKewDWwnOzk0_UMO3Y6Js-FrIYGAMfh0b_YX3pViJl5ZFEK-JJW8LfPj7Y/pub?output=csv';
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTcPsiXS7-q15p88s_HhOJKewDWwnOzk0_UMO3Y6Js-FrIYGAMfh0b_YX3pViJl5ZFEK-JJW8LfPj7Y/pub?output=csv';
         // ======================================================
 
         let regionData = [];
@@ -347,6 +384,7 @@
         let cityData = [];
         let configData = { monthlyGoalTotal: 176, dailyGoalPerRegion: 2 };
         let charts = { region: null, city: null, channel: null };
+        let isLoading = false;
 
         function showError(msg) {
             const errDiv = document.getElementById('errorMessage');
@@ -355,9 +393,22 @@
             setTimeout(() => errDiv.style.display = 'none', 5000);
         }
 
-        async function fetchCSV(csvUrl) {
+        function setLoading(loading) {
+            isLoading = loading;
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.disabled = loading;
+                if (loading) {
+                    refreshBtn.innerHTML = '<span class="loading-spinner"></span> Loading...';
+                } else {
+                    refreshBtn.innerHTML = '🔄 Refresh';
+                }
+            }
+        }
+
+        async function fetchCSV() {
             const cacheBuster = '&_=' + new Date().getTime();
-            const fullUrl = APPS_SCRIPT_URL + '?url=' + encodeURIComponent(csvUrl + cacheBuster);
+            const fullUrl = APPS_SCRIPT_URL + '?url=' + encodeURIComponent(CSV_URL + cacheBuster);
             const response = await fetch(fullUrl);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return await response.text();
@@ -383,16 +434,12 @@
         }
 
         async function loadAllData() {
-            const urlInput = document.getElementById('sheetUrl');
-            let csvUrl = urlInput.value;
-            if (!csvUrl) {
-                csvUrl = DEFAULT_CSV_URL;
-                urlInput.value = csvUrl;
-            }
+            if (isLoading) return;
+            setLoading(true);
 
             try {
                 document.getElementById('lastUpdated').innerHTML = '🔄 Loading...';
-                const csvText = await fetchCSV(csvUrl);
+                const csvText = await fetchCSV();
                 const allRows = parseCSV(csvText);
 
                 let tabs = [];
@@ -463,6 +510,8 @@
                 console.error(err);
                 showError('Failed to load data: ' + err.message);
                 document.getElementById('lastUpdated').innerHTML = '❌ Error loading data';
+            } finally {
+                setLoading(false);
             }
         }
 
@@ -574,22 +623,6 @@
             }).join('');
         }
 
-        function exportToCSV() {
-            const filtered = getFilteredData();
-            const headers = ['Agent', 'Region', 'Total Calls', 'Connected Calls', 'WhatsApp', 'Emails', 'Week1-5 Total', 'Monthly Target', 'Achieved Leads', 'Achievement %'];
-            const rows = filtered.agent.map(a => [
-                a.agent, a.region, a.totalCalls, a.connectedCalls, a.whatsapp, a.emails,
-                (a.week1 + a.week2 + a.week3 + a.week4 + a.week5), a.monthlyTarget, a.achievedLeads, a.achievementPct.toFixed(1)
-            ]);
-            const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'agent_performance.csv';
-            link.click();
-            URL.revokeObjectURL(link.href);
-        }
-
         document.getElementById('filterRegion').addEventListener('change', updateDashboard);
         document.getElementById('filterAgent').addEventListener('change', updateDashboard);
         document.getElementById('filterCity').addEventListener('change', updateDashboard);
@@ -597,13 +630,8 @@
         document.getElementById('dateEnd').addEventListener('change', updateDashboard);
 
         window.onload = () => {
-            const savedUrl = localStorage.getItem('dashboardSheetUrl');
-            if (savedUrl) document.getElementById('sheetUrl').value = savedUrl;
             loadAllData();
         };
-        document.getElementById('sheetUrl').addEventListener('change', () => {
-            localStorage.setItem('dashboardSheetUrl', document.getElementById('sheetUrl').value);
-        });
     </script>
 </body>
 </html>
