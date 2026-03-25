@@ -245,14 +245,14 @@
             const startDate = document.getElementById('dateStart').value;
             const endDate = document.getElementById('dateEnd').value;
             
-            // Get region(s) based on selections
-            let targetRegions = [];
+            // Determine which regions to show based on all filters
+            let targetRegions = new Set();
             
-            // If city is selected, find its region
+            // If city is selected, add its region
             if (selectedCity !== 'all') {
                 const cityInfo = cityData.find(c => c.city === selectedCity);
                 if (cityInfo && cityInfo.country) {
-                    targetRegions = [cityInfo.country];
+                    targetRegions.add(cityInfo.country);
                 }
             }
             
@@ -260,23 +260,22 @@
             if (selectedAgent !== 'all') {
                 const agentInfo = agentData.find(a => a.agent === selectedAgent);
                 if (agentInfo && agentInfo.region) {
-                    if (!targetRegions.includes(agentInfo.region)) {
-                        targetRegions.push(agentInfo.region);
-                    }
+                    targetRegions.add(agentInfo.region);
                 }
             }
             
             // If region is selected, add it
             if (selectedRegion !== 'all') {
-                if (!targetRegions.includes(selectedRegion)) {
-                    targetRegions.push(selectedRegion);
-                }
+                targetRegions.add(selectedRegion);
             }
             
             // If no specific selections, show all regions
-            if (targetRegions.length === 0) {
-                targetRegions = [...new Set(regionData.map(r => r.region))];
+            if (targetRegions.size === 0) {
+                regionData.forEach(r => targetRegions.add(r.region));
             }
+            
+            // Convert Set to Array
+            targetRegions = Array.from(targetRegions);
             
             // Filter region data
             let filteredRegion = regionData.filter(r => targetRegions.includes(r.region));
@@ -284,13 +283,13 @@
                 filteredRegion = filteredRegion.filter(r => r.date >= startDate && r.date <= endDate);
             }
             
-            // Filter agent data based on selected region and agent
+            // Filter agent data - show ALL agents from target regions
             let filteredAgent = agentData.filter(a => targetRegions.includes(a.region));
             if (selectedAgent !== 'all') {
                 filteredAgent = filteredAgent.filter(a => a.agent === selectedAgent);
             }
             
-            // Filter city data based on selected region and city
+            // Filter city data - show ALL cities from target regions
             let filteredCity = cityData.filter(c => targetRegions.includes(c.country));
             if (selectedCity !== 'all') {
                 filteredCity = filteredCity.filter(c => c.city === selectedCity);
@@ -342,7 +341,7 @@
                 });
             }
             
-            // City Chart
+            // City Chart - shows ALL cities in the selected regions
             const cityCounts = {};
             f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
             
@@ -389,11 +388,11 @@
             
             // Agent Table
             const headers = ['Agent', 'Region', 'Total Calls', 'Connected', 'WhatsApp', 'Emails', 'Week 1-5 Leads', 'Monthly Target', 'Achieved', 'Achievement %'];
-            document.getElementById('agentTableHead').innerHTML = `<td>${headers.map(h=>`<th>${h}</th>`).join('')}</tr>`;
+            document.getElementById('agentTableHead').innerHTML = `<tr>${headers.map(h=>`<th>${h}</th>`).join('')}`;
             document.getElementById('agentTableBody').innerHTML = f.agent.map(a => {
                 const weekly = a.week1 + a.week2 + a.week3 + a.week4 + a.week5;
                 const cls = a.achievementPct >= 80 ? 'achievement-high' : (a.achievementPct >= 50 ? '' : 'achievement-low');
-                return `<tr>
+                return `tr
                     <td>${a.agent}</td>
                     <td>${a.region}</td>
                     <td>${a.totalCalls}</td>
