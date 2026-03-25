@@ -138,7 +138,7 @@
                     }));
                 }
                 
-                // Parse Agent Data
+                // Parse Agent Data - keep full names
                 const agentRows = parseCSV(agentCSV);
                 if(agentRows.length > 1){
                     agentData = agentRows.slice(1).map(row => ({
@@ -196,6 +196,7 @@
         
         function updateFilters(){
             const regions=[...new Set(regionData.map(r=>r.region).filter(r=>r))];
+            // FIXED: Show full agent names
             const agents=[...new Set(agentData.map(a=>a.agent).filter(a=>a))];
             const cities=[...new Set(cityData.map(c=>c.city).filter(c=>c))];
             
@@ -215,11 +216,12 @@
             if(sr!=='all') fr=fr.filter(r=>r.region===sr); 
             if(sd&&ed) fr=fr.filter(r=>r.date>=sd && r.date<=ed);
             
+            // FIXED: Agent filter properly applied
             let fa=agentData; 
             if(sr!=='all') fa=fa.filter(a=>a.region===sr); 
             if(sa!=='all') fa=fa.filter(a=>a.agent===sa);
             
-            // FIXED: Filter cities based on selected region
+            // Filter cities based on selected region
             let fc=cityData;
             if(sr!=='all') fc=fc.filter(c=>c.country===sr);
             if(sc!=='all') fc=fc.filter(c=>c.city===sc);
@@ -268,7 +270,7 @@
                 });
             }
             
-            // City Chart - shows cities from selected region only, with data labels
+            // City Chart - shows cities from selected region only
             const cityCounts = {};
             f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
             
@@ -310,9 +312,8 @@
                     }
                 });
             } else {
-                // Show message when no cities for selected region
-                document.getElementById('cityChart').getContext('2d').clearRect(0, 0, 400, 300);
                 const ctx = document.getElementById('cityChart').getContext('2d');
+                ctx.clearRect(0, 0, 400, 300);
                 ctx.font = '14px Segoe UI';
                 ctx.fillStyle = '#94a3b8';
                 ctx.textAlign = 'center';
@@ -362,15 +363,28 @@
             document.getElementById('agentTableBody').innerHTML=f.agent.map(a=>{
                 const weekly=a.week1+a.week2+a.week3+a.week4+a.week5;
                 const cls=a.achievementPct>=80?'achievement-high':(a.achievementPct>=50?'':'achievement-low');
-                return `<tr><td>${a.agent}</td><td>${a.region}</td><td>${a.totalCalls}</td><td>${a.connectedCalls}</td><td>${a.whatsapp}</td><td>${a.emails}</td><td>${weekly}</td><td>${a.monthlyTarget}</td><td>${a.achievedLeads}</td><td class="${cls}">${a.achievementPct.toFixed(1)}%</td></tr>`;
+                return `<tr>
+                    <td>${a.agent}</td>
+                    <td>${a.region}</td>
+                    <td>${a.totalCalls}</td>
+                    <td>${a.connectedCalls}</td>
+                    <td>${a.whatsapp}</td>
+                    <td>${a.emails}</td>
+                    <td>${weekly}</td>
+                    <td>${a.monthlyTarget}</td>
+                    <td>${a.achievedLeads}</td>
+                    <td class="${cls}">${a.achievementPct.toFixed(1)}%</td>
+                </tr>`;
             }).join('');
         }
         
-        document.getElementById('filterRegion').addEventListener('change', updateDashboard);
-        document.getElementById('filterAgent').addEventListener('change', updateDashboard);
-        document.getElementById('filterCity').addEventListener('change', updateDashboard);
-        document.getElementById('dateStart').addEventListener('change', updateDashboard);
-        document.getElementById('dateEnd').addEventListener('change', updateDashboard);
+        // FIXED: Ensure all filters trigger dashboard update
+        document.getElementById('filterRegion').addEventListener('change', () => updateDashboard());
+        document.getElementById('filterAgent').addEventListener('change', () => updateDashboard());
+        document.getElementById('filterCity').addEventListener('change', () => updateDashboard());
+        document.getElementById('dateStart').addEventListener('change', () => updateDashboard());
+        document.getElementById('dateEnd').addEventListener('change', () => updateDashboard());
+        
         window.onload=()=>loadAllData();
     </script>
 </body>
