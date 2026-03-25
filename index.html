@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Monthly Performance Dashboard | Regional Tracker</title>
+    <title>Monthly Performance Dashboard | Regional Sales Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
@@ -97,9 +97,44 @@
             return await response.text();
         }
         
-        function parseCSV(t){ 
-            const rows=t.split(/\r?\n/).filter(r=>r.trim()!==''); 
-            return rows.map(r=>{ const m=r.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g); if(m)return m.map(c=>c.replace(/^"|"$/g,'').trim()); return r.split(',').map(c=>c.trim().replace(/^"|"$/g,'')); }); 
+        // FIXED: Proper CSV parser that handles quoted fields with spaces
+        function parseCSV(csvText) {
+            const rows = [];
+            const lines = csvText.split(/\r?\n/);
+            
+            for (let line of lines) {
+                if (line.trim() === '') continue;
+                
+                const row = [];
+                let inQuotes = false;
+                let currentCell = '';
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        row.push(currentCell.trim());
+                        currentCell = '';
+                    } else {
+                        currentCell += char;
+                    }
+                }
+                row.push(currentCell.trim());
+                
+                // Clean up quotes from cells
+                const cleanedRow = row.map(cell => {
+                    if (cell.startsWith('"') && cell.endsWith('"')) {
+                        return cell.slice(1, -1);
+                    }
+                    return cell;
+                });
+                
+                rows.push(cleanedRow);
+            }
+            
+            return rows;
         }
         
         async function loadAllData(){
@@ -134,7 +169,7 @@
                     }));
                 }
                 
-                // Parse Agent Data with DEBUG
+                // Parse Agent Data - now with proper CSV parser
                 const agentRows = parseCSV(agentCSV);
                 console.log('=== AGENT CSV DEBUG ===');
                 console.log('Total agent rows:', agentRows.length);
@@ -142,11 +177,11 @@
                 
                 if(agentRows.length > 1){
                     agentData = agentRows.slice(1).map((row, idx) => {
-                        console.log(`Row ${idx + 1}:`, row);
-                        console.log(`  Column 1 (Agent) raw: "${row[1]}"`);
+                        const agentName = row[1] ? row[1].trim() : '';
+                        console.log(`Row ${idx + 1} - Agent: "${agentName}"`);
                         return {
                             srNo: row[0] || '',
-                            agent: row[1] ? row[1].trim() : '',
+                            agent: agentName,
                             region: row[2] || '',
                             totalCalls: parseFloat(row[3]) || 0,
                             connectedCalls: parseFloat(row[4]) || 0,
