@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Monthly Performance Dashboard | Regional Sales Tracker</title>
+    <title>Monthly Performance Dashboard | Regional Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
@@ -71,20 +71,16 @@
         <div class="footer"><p>Data refreshes from Google Sheets | Last sync: <span id="syncTime">—</span></p></div>
     </div>
     <script>
-        // Register datalabels plugin
         Chart.register(ChartDataLabels);
         
-        // ==================== CONFIGURATION ====================
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz32sowAxDQosCoO29lMhBVRNFuC1_qpaMh_Y_fJ0YTSAvPAfov7MdTAARzGyV3mHQ72A/exec';
         
-        // Individual tab URLs
         const CSV_URLS = {
             region: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxl3KDZ4k7rNc2Auy9iynlEuXEwjkFiSilwrseOxcH3JLTIsDhE0iWQlGuB0CIgfh_b4IRL3Qfz9Z5/pub?gid=0&single=true&output=csv',
             agent: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxl3KDZ4k7rNc2Auy9iynlEuXEwjkFiSilwrseOxcH3JLTIsDhE0iWQlGuB0CIgfh_b4IRL3Qfz9Z5/pub?gid=1067745333&single=true&output=csv',
             city: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxl3KDZ4k7rNc2Auy9iynlEuXEwjkFiSilwrseOxcH3JLTIsDhE0iWQlGuB0CIgfh_b4IRL3Qfz9Z5/pub?gid=477050768&single=true&output=csv',
             config: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxl3KDZ4k7rNc2Auy9iynlEuXEwjkFiSilwrseOxcH3JLTIsDhE0iWQlGuB0CIgfh_b4IRL3Qfz9Z5/pub?gid=1341037513&single=true&output=csv'
         };
-        // ======================================================
 
         let regionData = [], agentData = [], cityData = [];
         let configData = { monthlyGoalTotal: 176, dailyGoalPerRegion: 2 };
@@ -138,27 +134,36 @@
                     }));
                 }
                 
-                // Parse Agent Data - keep full names
+                // Parse Agent Data with DEBUG
                 const agentRows = parseCSV(agentCSV);
+                console.log('=== AGENT CSV DEBUG ===');
+                console.log('Total agent rows:', agentRows.length);
+                console.log('Header row:', agentRows[0]);
+                
                 if(agentRows.length > 1){
-                    agentData = agentRows.slice(1).map(row => ({
-                        srNo: row[0] || '',
-                        agent: row[1] || '',
-                        region: row[2] || '',
-                        totalCalls: parseFloat(row[3]) || 0,
-                        connectedCalls: parseFloat(row[4]) || 0,
-                        whatsapp: parseFloat(row[5]) || 0,
-                        emails: parseFloat(row[6]) || 0,
-                        selfProfiling: parseFloat(row[7]) || 0,
-                        week1: parseFloat(row[8]) || 0,
-                        week2: parseFloat(row[9]) || 0,
-                        week3: parseFloat(row[10]) || 0,
-                        week4: parseFloat(row[11]) || 0,
-                        week5: parseFloat(row[12]) || 0,
-                        monthlyTarget: parseFloat(row[13]) || 0,
-                        achievedLeads: parseFloat(row[14]) || 0,
-                        achievementPct: parseFloat(row[15]) || 0
-                    }));
+                    agentData = agentRows.slice(1).map((row, idx) => {
+                        console.log(`Row ${idx + 1}:`, row);
+                        console.log(`  Column 1 (Agent) raw: "${row[1]}"`);
+                        return {
+                            srNo: row[0] || '',
+                            agent: row[1] ? row[1].trim() : '',
+                            region: row[2] || '',
+                            totalCalls: parseFloat(row[3]) || 0,
+                            connectedCalls: parseFloat(row[4]) || 0,
+                            whatsapp: parseFloat(row[5]) || 0,
+                            emails: parseFloat(row[6]) || 0,
+                            selfProfiling: parseFloat(row[7]) || 0,
+                            week1: parseFloat(row[8]) || 0,
+                            week2: parseFloat(row[9]) || 0,
+                            week3: parseFloat(row[10]) || 0,
+                            week4: parseFloat(row[11]) || 0,
+                            week5: parseFloat(row[12]) || 0,
+                            monthlyTarget: parseFloat(row[13]) || 0,
+                            achievedLeads: parseFloat(row[14]) || 0,
+                            achievementPct: parseFloat(row[15]) || 0
+                        };
+                    });
+                    console.log('Final agent names:', agentData.map(a => a.agent));
                 }
                 
                 // Parse City Data
@@ -196,7 +201,6 @@
         
         function updateFilters(){
             const regions=[...new Set(regionData.map(r=>r.region).filter(r=>r))];
-            // FIXED: Show full agent names
             const agents=[...new Set(agentData.map(a=>a.agent).filter(a=>a))];
             const cities=[...new Set(cityData.map(c=>c.city).filter(c=>c))];
             
@@ -216,12 +220,10 @@
             if(sr!=='all') fr=fr.filter(r=>r.region===sr); 
             if(sd&&ed) fr=fr.filter(r=>r.date>=sd && r.date<=ed);
             
-            // FIXED: Agent filter properly applied
             let fa=agentData; 
             if(sr!=='all') fa=fa.filter(a=>a.region===sr); 
             if(sa!=='all') fa=fa.filter(a=>a.agent===sa);
             
-            // Filter cities based on selected region
             let fc=cityData;
             if(sr!=='all') fc=fc.filter(c=>c.country===sr);
             if(sc!=='all') fc=fc.filter(c=>c.city===sc);
@@ -239,7 +241,6 @@
             const connRate=totalCalls>0?(totalConnected/totalCalls)*100:0;
             document.getElementById('kpiGrid').innerHTML=`<div class="kpi-card"><h4>📅 Monthly Goal</h4><div class="kpi-value">${totalGoal}</div></div><div class="kpi-card"><h4>✅ Achieved Leads</h4><div class="kpi-value">${totalAchieved}</div></div><div class="kpi-card"><h4>🎯 Achievement %</h4><div class="kpi-value">${overallAch.toFixed(1)}%</div></div><div class="kpi-card"><h4>📞 Total Calls</h4><div class="kpi-value">${totalCalls}</div></div><div class="kpi-card"><h4>📞 Connection Rate</h4><div class="kpi-value">${connRate.toFixed(1)}%</div></div>`;
             
-            // Region Chart with data labels
             if(charts.region) charts.region.destroy();
             if(f.region.length){
                 charts.region = new Chart(document.getElementById('regionChart'), {
@@ -257,20 +258,12 @@
                         plugins: {
                             tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.raw.toLocaleString(); } } },
                             legend: { position: 'top' },
-                            datalabels: {
-                                anchor: 'end',
-                                align: 'top',
-                                offset: 4,
-                                formatter: (value) => value.toLocaleString(),
-                                font: { weight: 'bold', size: 11 },
-                                color: '#2d3a45'
-                            }
+                            datalabels: { anchor: 'end', align: 'top', offset: 4, formatter: (value) => value.toLocaleString(), font: { weight: 'bold', size: 11 }, color: '#2d3a45' }
                         }
                     }
                 });
             }
             
-            // City Chart - shows cities from selected region only
             const cityCounts = {};
             f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
             
@@ -280,12 +273,7 @@
                     type: 'pie',
                     data: {
                         labels: Object.keys(cityCounts),
-                        datasets: [{ 
-                            data: Object.values(cityCounts), 
-                            backgroundColor: ['#A05AFF', '#1BCFB4', '#FE9496', '#4BCBEB', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'],
-                            borderWidth: 0,
-                            hoverOffset: 10
-                        }]
+                        datasets: [{ data: Object.values(cityCounts), backgroundColor: ['#A05AFF', '#1BCFB4', '#FE9496', '#4BCBEB', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'], borderWidth: 0, hoverOffset: 10 }]
                     },
                     options: {
                         responsive: true,
@@ -293,21 +281,7 @@
                         plugins: {
                             tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.raw + ' city(s)'; } } },
                             legend: { position: 'right', labels: { font: { size: 11 } } },
-                            datalabels: {
-                                formatter: (value, ctx) => {
-                                    const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${value} (${percentage}%)`;
-                                },
-                                color: '#fff',
-                                font: { weight: 'bold', size: 12 },
-                                backgroundColor: 'rgba(0,0,0,0.6)',
-                                borderRadius: 4,
-                                padding: { left: 6, right: 6, top: 2, bottom: 2 },
-                                align: 'center',
-                                anchor: 'center',
-                                offset: 0
-                            }
+                            datalabels: { formatter: (value, ctx) => { const total = ctx.dataset.data.reduce((a,b) => a + b, 0); const percentage = ((value / total) * 100).toFixed(1); return `${value} (${percentage}%)`; }, color: '#fff', font: { weight: 'bold', size: 12 }, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: { left: 6, right: 6, top: 2, bottom: 2 }, align: 'center', anchor: 'center', offset: 0 }
                         }
                     }
                 });
@@ -320,65 +294,28 @@
                 ctx.fillText('No cities found for selected region', 200, 150);
             }
             
-            // Channel Chart with data labels
             const totalWhatsapp=f.agent.reduce((s,a)=>s+a.whatsapp,0);
             const totalEmails=f.agent.reduce((s,a)=>s+a.emails,0);
             if(charts.channel) charts.channel.destroy();
             charts.channel = new Chart(document.getElementById('channelChart'), {
                 type: 'bar',
-                data: {
-                    labels: ['Connected Calls', 'WhatsApp', 'Emails'],
-                    datasets: [{ 
-                        data: [totalConnected, totalWhatsapp, totalEmails], 
-                        backgroundColor: '#A05AFF',
-                        borderRadius: 8,
-                        barPercentage: 0.6
-                    }]
-                },
+                data: { labels: ['Connected Calls', 'WhatsApp', 'Emails'], datasets: [{ data: [totalConnected, totalWhatsapp, totalEmails], backgroundColor: '#A05AFF', borderRadius: 8, barPercentage: 0.6 }] },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        tooltip: { callbacks: { label: function(ctx) { return ctx.raw.toLocaleString(); } } },
-                        legend: { display: false },
-                        datalabels: {
-                            anchor: 'end',
-                            align: 'top',
-                            offset: 4,
-                            formatter: (value) => value.toLocaleString(),
-                            font: { weight: 'bold', size: 11 },
-                            color: '#2d3a45'
-                        }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, title: { display: true, text: 'Count', font: { weight: 'bold' } } },
-                        x: { title: { display: true, text: 'Channel', font: { weight: 'bold' } } }
-                    }
+                    responsive: true, maintainAspectRatio: true,
+                    plugins: { tooltip: { callbacks: { label: function(ctx) { return ctx.raw.toLocaleString(); } } }, legend: { display: false }, datalabels: { anchor: 'end', align: 'top', offset: 4, formatter: (value) => value.toLocaleString(), font: { weight: 'bold', size: 11 }, color: '#2d3a45' } },
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Count', font: { weight: 'bold' } } }, x: { title: { display: true, text: 'Channel', font: { weight: 'bold' } } } }
                 }
             });
             
-            // Agent table
             const headers=['Agent','Region','Total Calls','Connected','WhatsApp','Emails','Week 1-5 Leads','Monthly Target','Achieved','Achievement %'];
             document.getElementById('agentTableHead').innerHTML=`<tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr>`;
             document.getElementById('agentTableBody').innerHTML=f.agent.map(a=>{
                 const weekly=a.week1+a.week2+a.week3+a.week4+a.week5;
                 const cls=a.achievementPct>=80?'achievement-high':(a.achievementPct>=50?'':'achievement-low');
-                return `<tr>
-                    <td>${a.agent}</td>
-                    <td>${a.region}</td>
-                    <td>${a.totalCalls}</td>
-                    <td>${a.connectedCalls}</td>
-                    <td>${a.whatsapp}</td>
-                    <td>${a.emails}</td>
-                    <td>${weekly}</td>
-                    <td>${a.monthlyTarget}</td>
-                    <td>${a.achievedLeads}</td>
-                    <td class="${cls}">${a.achievementPct.toFixed(1)}%</td>
-                </tr>`;
+                return `<tr><td>${a.agent}</td><td>${a.region}</td><td>${a.totalCalls}</td><td>${a.connectedCalls}</td><td>${a.whatsapp}</td><td>${a.emails}</td><td>${weekly}</td><td>${a.monthlyTarget}</td><td>${a.achievedLeads}</td><td class="${cls}">${a.achievementPct.toFixed(1)}%</td></tr>`;
             }).join('');
         }
         
-        // FIXED: Ensure all filters trigger dashboard update
         document.getElementById('filterRegion').addEventListener('change', () => updateDashboard());
         document.getElementById('filterAgent').addEventListener('change', () => updateDashboard());
         document.getElementById('filterCity').addEventListener('change', () => updateDashboard());
