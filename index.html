@@ -95,20 +95,11 @@
         let charts = { team: null, city: null, agentDetailed: null };
         let isLoading = false;
 
-        // Color scheme matching the dashboard - Purple and Teal shades
+        // Purple and Teal shades matching the dashboard
         const cityColors = [
-            '#A05AFF',  // Primary Purple
-            '#8A3FE0',  // Darker Purple
-            '#B77CFF',  // Light Purple
-            '#C99EFF',  // Lighter Purple
-            '#1BCFB4',  // Primary Teal
-            '#0F9F8A',  // Darker Teal
-            '#4FE0C4',  // Light Teal
-            '#7FEFD8',  // Lighter Teal
-            '#9C27B0',  // Royal Purple
-            '#673AB7',  // Deep Purple
-            '#00ACC1',  // Cyan Teal
-            '#26A69A'   // Green Teal
+            '#A05AFF', '#8A3FE0', '#B77CFF', '#C99EFF',
+            '#1BCFB4', '#0F9F8A', '#4FE0C4', '#7FEFD8',
+            '#9C27B0', '#673AB7', '#00ACC1', '#26A69A'
         ];
 
         function showError(msg) { const d=document.getElementById('errorMessage'); d.innerHTML=msg; d.style.display='block'; setTimeout(()=>d.style.display='none',5000); }
@@ -365,7 +356,7 @@
                 });
             }
             
-            // City Chart with matching Purple/Teal shades and labels OUTSIDE
+            // City Chart with labels INSIDE the frame (reduced gap)
             const cityCounts = {};
             f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
             const cityLabels = Object.keys(cityCounts);
@@ -373,7 +364,6 @@
             
             if(charts.city) charts.city.destroy();
             if(cityLabels.length){
-                // Cycle through colors for all cities
                 const colors = [];
                 for (let i = 0; i < cityLabels.length; i++) {
                     colors.push(cityColors[i % cityColors.length]);
@@ -394,7 +384,7 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
-                        layout: { padding: { top: 25, bottom: 25, left: 25, right: 25 } },
+                        layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
                         plugins: {
                             tooltip: { 
                                 callbacks: { 
@@ -413,10 +403,10 @@
                             legend: { 
                                 position: 'right', 
                                 labels: { 
-                                    font: { size: 11, family: "'Segoe UI'" }, 
+                                    font: { size: 10, family: "'Segoe UI'" }, 
                                     usePointStyle: true, 
-                                    boxWidth: 12,
-                                    padding: 10,
+                                    boxWidth: 10,
+                                    padding: 8,
                                     color: '#2d3a45'
                                 } 
                             },
@@ -428,20 +418,14 @@
                                     return `${percentage}%`;
                                 },
                                 color: '#2d3a45',
-                                font: { weight: 'bold', size: 12 },
-                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                borderRadius: 20,
-                                padding: { left: 10, right: 10, top: 5, bottom: 5 },
-                                align: function(context) {
-                                    // Position labels outside the pie
-                                    return 'end';
-                                },
-                                anchor: function(context) {
-                                    return 'end';
-                                },
-                                offset: 20,
-                                clamp: false,
-                                textAlign: 'center'
+                                font: { weight: 'bold', size: 11 },
+                                backgroundColor: 'rgba(255,255,255,0.9)',
+                                borderRadius: 16,
+                                padding: { left: 6, right: 6, top: 3, bottom: 3 },
+                                align: 'center',
+                                anchor: 'center',
+                                offset: 5,
+                                clamp: true
                             }
                         },
                         elements: {
