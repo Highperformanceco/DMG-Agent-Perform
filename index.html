@@ -95,28 +95,12 @@
         let charts = { team: null, city: null, agentDetailed: null };
         let isLoading = false;
 
-        // Vibrant but eye-catching city colors
+        // Your custom colors
         const cityColors = [
-            '#FF6B6B',  // Coral Red
-            '#4ECDC4',  // Turquoise
-            '#45B7D1',  // Sky Blue
-            '#96CEB4',  // Sage Green
-            '#FFEAA7',  // Soft Yellow
-            '#DDA0DD',  // Plum
-            '#98D8C8',  // Mint
-            '#F7B05E',  // Apricot
-            '#B5EAD7',  // Seafoam
-            '#C7CEE6',  // Lavender
-            '#FFB7B2',  // Blush
-            '#A2D2FF',  // Baby Blue
-            '#B8F2E6',  // Pale Aqua
-            '#FFD6B5',  // Peach
-            '#E2CFC4',  // Taupe
-            '#C4E6F1',  // Light Cyan
-            '#FADADD',  // Light Pink
-            '#D4E2D4',  // Pale Green
-            '#FFD966',  // Golden
-            '#E6B8E2'   // Light Purple
+            '#9E6849',  // Terracotta Brown
+            '#203646',  // Dark Teal
+            '#09857C',  // Teal Green
+            '#898459'   // Olive Khaki
         ];
 
         function showError(msg) { const d=document.getElementById('errorMessage'); d.innerHTML=msg; d.style.display='block'; setTimeout(()=>d.style.display='none',5000); }
@@ -329,7 +313,7 @@
                 <div class="kpi-card"><h4>📧 Emails Sent</h4><div class="kpi-value">${totalEmails.toLocaleString()}</div><div class="kpi-sub">Email communications</div></div>
             `;
             
-            // Team-wise Chart with FIXED label positioning to prevent overlap
+            // Team-wise Chart
             if(charts.team) charts.team.destroy();
             if(f.region.length){
                 charts.team = new Chart(document.getElementById('teamChart'), {
@@ -357,9 +341,7 @@
                                 color: '#2d3a45',
                                 backgroundColor: 'rgba(255,255,255,0.85)',
                                 borderRadius: 4,
-                                padding: { left: 5, right: 5, top: 2, bottom: 2 },
-                                clamp: true,
-                                clip: false
+                                padding: { left: 5, right: 5, top: 2, bottom: 2 }
                             }
                         },
                         scales: {
@@ -375,7 +357,7 @@
                 });
             }
             
-            // City Chart with VIBRANT COLORS
+            // City Chart with YOUR COLORS and labels OUTSIDE the circle
             const cityCounts = {};
             f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
             const cityLabels = Object.keys(cityCounts);
@@ -383,13 +365,19 @@
             
             if(charts.city) charts.city.destroy();
             if(cityLabels.length){
+                // Cycle through colors if more cities than colors
+                const colors = [];
+                for (let i = 0; i < cityLabels.length; i++) {
+                    colors.push(cityColors[i % cityColors.length]);
+                }
+                
                 charts.city = new Chart(document.getElementById('cityChart'), {
                     type: 'pie',
                     data: {
                         labels: cityLabels,
                         datasets: [{ 
                             data: cityDataValues, 
-                            backgroundColor: cityColors.slice(0, cityLabels.length),
+                            backgroundColor: colors,
                             borderWidth: 0,
                             hoverOffset: 10,
                             hoverBorderWidth: 2,
@@ -399,7 +387,7 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
-                        layout: { padding: 10 },
+                        layout: { padding: { top: 20, bottom: 20, left: 20, right: 20 } },
                         plugins: {
                             tooltip: { 
                                 callbacks: { 
@@ -428,17 +416,23 @@
                                 formatter: (value, ctx) => {
                                     const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
                                     const percentage = ((value / total) * 100).toFixed(1);
-                                    if (percentage < 4) return '';
+                                    if (percentage < 5) return '';
                                     return `${percentage}%`;
                                 },
                                 color: '#2d3a45',
                                 font: { weight: 'bold', size: 11 },
-                                backgroundColor: 'rgba(255,255,255,0.85)',
+                                backgroundColor: 'rgba(255,255,255,0.9)',
                                 borderRadius: 20,
-                                padding: { left: 6, right: 6, top: 3, bottom: 3 },
-                                align: 'center',
-                                anchor: 'center',
-                                offset: 0
+                                padding: { left: 8, right: 8, top: 4, bottom: 4 },
+                                align: 'end',
+                                anchor: 'end',
+                                offset: 15,
+                                clamp: false
+                            }
+                        },
+                        elements: {
+                            arc: {
+                                borderWidth: 0
                             }
                         }
                     }
