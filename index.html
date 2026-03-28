@@ -95,12 +95,20 @@
         let charts = { team: null, city: null, agentDetailed: null };
         let isLoading = false;
 
-        // Your custom colors
+        // Color scheme matching the dashboard - Purple and Teal shades
         const cityColors = [
-            '#9E6849',  // Terracotta Brown
-            '#203646',  // Dark Teal
-            '#09857C',  // Teal Green
-            '#898459'   // Olive Khaki
+            '#A05AFF',  // Primary Purple
+            '#8A3FE0',  // Darker Purple
+            '#B77CFF',  // Light Purple
+            '#C99EFF',  // Lighter Purple
+            '#1BCFB4',  // Primary Teal
+            '#0F9F8A',  // Darker Teal
+            '#4FE0C4',  // Light Teal
+            '#7FEFD8',  // Lighter Teal
+            '#9C27B0',  // Royal Purple
+            '#673AB7',  // Deep Purple
+            '#00ACC1',  // Cyan Teal
+            '#26A69A'   // Green Teal
         ];
 
         function showError(msg) { const d=document.getElementById('errorMessage'); d.innerHTML=msg; d.style.display='block'; setTimeout(()=>d.style.display='none',5000); }
@@ -357,7 +365,7 @@
                 });
             }
             
-            // City Chart with YOUR COLORS and labels OUTSIDE the circle
+            // City Chart with matching Purple/Teal shades and labels OUTSIDE
             const cityCounts = {};
             f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
             const cityLabels = Object.keys(cityCounts);
@@ -365,7 +373,7 @@
             
             if(charts.city) charts.city.destroy();
             if(cityLabels.length){
-                // Cycle through colors if more cities than colors
+                // Cycle through colors for all cities
                 const colors = [];
                 for (let i = 0; i < cityLabels.length; i++) {
                     colors.push(cityColors[i % cityColors.length]);
@@ -378,16 +386,15 @@
                         datasets: [{ 
                             data: cityDataValues, 
                             backgroundColor: colors,
-                            borderWidth: 0,
-                            hoverOffset: 10,
-                            hoverBorderWidth: 2,
-                            hoverBorderColor: '#fff'
+                            borderWidth: 2,
+                            borderColor: '#fff',
+                            hoverOffset: 12
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
-                        layout: { padding: { top: 20, bottom: 20, left: 20, right: 20 } },
+                        layout: { padding: { top: 25, bottom: 25, left: 25, right: 25 } },
                         plugins: {
                             tooltip: { 
                                 callbacks: { 
@@ -400,15 +407,16 @@
                                 backgroundColor: '#2d3a45',
                                 titleColor: '#fff',
                                 bodyColor: '#fff',
-                                padding: 8
+                                padding: 8,
+                                cornerRadius: 8
                             },
                             legend: { 
                                 position: 'right', 
                                 labels: { 
-                                    font: { size: 10, family: "'Segoe UI'" }, 
+                                    font: { size: 11, family: "'Segoe UI'" }, 
                                     usePointStyle: true, 
-                                    boxWidth: 10,
-                                    padding: 8,
+                                    boxWidth: 12,
+                                    padding: 10,
                                     color: '#2d3a45'
                                 } 
                             },
@@ -416,23 +424,30 @@
                                 formatter: (value, ctx) => {
                                     const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
                                     const percentage = ((value / total) * 100).toFixed(1);
-                                    if (percentage < 5) return '';
+                                    if (percentage < 4) return '';
                                     return `${percentage}%`;
                                 },
                                 color: '#2d3a45',
-                                font: { weight: 'bold', size: 11 },
-                                backgroundColor: 'rgba(255,255,255,0.9)',
+                                font: { weight: 'bold', size: 12 },
+                                backgroundColor: 'rgba(255,255,255,0.95)',
                                 borderRadius: 20,
-                                padding: { left: 8, right: 8, top: 4, bottom: 4 },
-                                align: 'end',
-                                anchor: 'end',
-                                offset: 15,
-                                clamp: false
+                                padding: { left: 10, right: 10, top: 5, bottom: 5 },
+                                align: function(context) {
+                                    // Position labels outside the pie
+                                    return 'end';
+                                },
+                                anchor: function(context) {
+                                    return 'end';
+                                },
+                                offset: 20,
+                                clamp: false,
+                                textAlign: 'center'
                             }
                         },
                         elements: {
                             arc: {
-                                borderWidth: 0
+                                borderWidth: 2,
+                                borderColor: '#fff'
                             }
                         }
                     }
