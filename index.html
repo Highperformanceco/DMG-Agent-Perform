@@ -34,14 +34,6 @@
         .chart-card { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid rgba(160,90,255,0.2); }
         .chart-card h3 { color: #2d3a45; margin-bottom: 15px; font-size: 1.1em; }
         canvas { max-height: 300px; }
-        .table-container { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; margin-bottom: 25px; border: 1px solid rgba(160,90,255,0.2); }
-        .table-container h3 { color: #2d3a45; margin-bottom: 20px; font-size: 1.2em; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
-        th { text-align: left; padding: 12px 8px; background: rgba(0,0,0,0.02); color: #475569; font-weight: 600; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; background: white; }
-        td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; color: #2d3a45; }
-        tr:hover { background: rgba(160,90,255,0.05); }
-        .achievement-high { color: #10b981; font-weight: 600; }
-        .achievement-low { color: #ef4444; font-weight: 600; }
         .error-message { background: #fee2e2; color: #dc2626; padding: 12px 20px; border-radius: 10px; margin-bottom: 15px; display: none; }
         .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 0.9em; }
         .filter-note { font-size: 0.75em; color: #A05AFF; margin-top: 5px; font-style: italic; }
@@ -60,7 +52,7 @@
         
         <div class="filters">
             <div class="filter-group"><label>🌍 Region</label><select id="filterRegion"><option value="all">All Regions</option></select></div>
-            <div class="filter-group"><label>👤 Agent</label><select id="filterAgent"><option value="all">All Agents</option></select></div>
+            <div class="filter-group"><label>👤 Team Lead</label><select id="filterTeamLead"><option value="all">All Team Leads</option></select></div>
             <div class="filter-group"><label>🏙️ City</label><select id="filterCity"><option value="all">All Cities</option></select></div>
             <div class="filter-group"><label>📅 Date Range (Start)</label><input type="date" id="dateStart"></div>
             <div class="filter-group"><label>📅 Date Range (End)</label><input type="date" id="dateEnd"></div>
@@ -70,13 +62,11 @@
             <div class="kpi-grid" id="kpiGrid"><div class="kpi-card"><h4>📅 Monthly Goal</h4><div class="kpi-value">—</div></div><div class="kpi-card"><h4>✅ Achieved Leads</h4><div class="kpi-value">—</div></div><div class="kpi-card"><h4>🎯 Achievement %</h4><div class="kpi-value">—</div></div><div class="kpi-card"><h4>📞 Total Calls</h4><div class="kpi-value">—</div></div><div class="kpi-card"><h4>📞 Connection Rate</h4><div class="kpi-value">—</div></div></div>
             
             <div class="charts-row">
-                <div class="chart-card"><h3>📊 Region-wise: Monthly Goal vs Achieved</h3><canvas id="regionChart"></canvas></div>
+                <div class="chart-card"><h3>👥 Team-wise: Monthly Goal vs Achieved</h3><canvas id="teamChart"></canvas></div>
                 <div class="chart-card"><h3>🌍 City Distribution</h3><canvas id="cityChart"></canvas></div>
             </div>
             
-            <div class="chart-card" style="margin-bottom: 25px;"><h3>📞 Communication Channel Performance</h3><canvas id="channelChart" style="max-height: 250px;"></canvas></div>
-            
-            <div class="table-container"><h3>👥 Agent-wise Detailed Performance</h3><div style="overflow-x: auto;"><table id="agentTable"><thead id="agentTableHead"></thead><tbody id="agentTableBody"></tbody>}</div></div>
+            <div class="chart-card" style="margin-bottom: 25px;"><h3>⭐ Agent-wise Performance (Top 10 by Achieved Leads)</h3><canvas id="agentPerformanceChart" style="max-height: 250px;"></canvas></div>
         </div>
         
         <div class="footer"><p>Data refreshes from Google Sheets | Last sync: <span id="syncTime">—</span></p></div>
@@ -95,7 +85,7 @@
 
         let regionData = [], agentData = [], cityData = [];
         let configData = { monthlyGoalTotal: 176, dailyGoalPerRegion: 2 };
-        let charts = { region: null, city: null, channel: null };
+        let charts = { team: null, city: null, agent: null };
         let isLoading = false;
 
         function showError(msg) { const d=document.getElementById('errorMessage'); d.innerHTML=msg; d.style.display='block'; setTimeout(()=>d.style.display='none',5000); }
@@ -222,16 +212,16 @@
         
         function updateFilters(){
             const regions=[...new Set(regionData.map(r=>r.region).filter(r=>r))];
-            const agents=[...new Set(agentData.map(a=>a.agent).filter(a=>a))];
+            const teamLeads=[...new Set(agentData.map(a=>a.region).filter(r=>r))];
             const cities=[...new Set(cityData.map(c=>c.city).filter(c=>c))];
             
             const rs=document.getElementById('filterRegion'); 
             rs.innerHTML='<option value="all">All Regions</option>'; 
             regions.forEach(r=>rs.innerHTML+=`<option value="${r}">${r}</option>`);
             
-            const as=document.getElementById('filterAgent'); 
-            as.innerHTML='<option value="all">All Agents</option>'; 
-            agents.forEach(a=>as.innerHTML+=`<option value="${a}">${a}</option>`);
+            const tl=document.getElementById('filterTeamLead'); 
+            tl.innerHTML='<option value="all">All Team Leads</option>'; 
+            teamLeads.forEach(t=>tl.innerHTML+=`<option value="${t}">${t}</option>`);
             
             const cs=document.getElementById('filterCity'); 
             cs.innerHTML='<option value="all">All Cities</option>'; 
@@ -240,7 +230,7 @@
         
         function getFilteredData(){
             const selectedRegion = document.getElementById('filterRegion').value;
-            const selectedAgent = document.getElementById('filterAgent').value;
+            const selectedTeamLead = document.getElementById('filterTeamLead').value;
             const selectedCity = document.getElementById('filterCity').value;
             const startDate = document.getElementById('dateStart').value;
             const endDate = document.getElementById('dateEnd').value;
@@ -256,12 +246,9 @@
                 }
             }
             
-            // If agent is selected, add its region
-            if (selectedAgent !== 'all') {
-                const agentInfo = agentData.find(a => a.agent === selectedAgent);
-                if (agentInfo && agentInfo.region) {
-                    targetRegions.add(agentInfo.region);
-                }
+            // If team lead is selected, add its region
+            if (selectedTeamLead !== 'all') {
+                targetRegions.add(selectedTeamLead);
             }
             
             // If region is selected, add it
@@ -283,13 +270,13 @@
                 filteredRegion = filteredRegion.filter(r => r.date >= startDate && r.date <= endDate);
             }
             
-            // Filter agent data - show ALL agents from target regions
+            // Filter agent data - show agents from target regions
             let filteredAgent = agentData.filter(a => targetRegions.includes(a.region));
-            if (selectedAgent !== 'all') {
-                filteredAgent = filteredAgent.filter(a => a.agent === selectedAgent);
+            if (selectedTeamLead !== 'all') {
+                filteredAgent = filteredAgent.filter(a => a.region === selectedTeamLead);
             }
             
-            // Filter city data - show ALL cities from target regions
+            // Filter city data - show cities from target regions
             let filteredCity = cityData.filter(c => targetRegions.includes(c.country));
             if (selectedCity !== 'all') {
                 filteredCity = filteredCity.filter(c => c.city === selectedCity);
@@ -317,10 +304,10 @@
                 <div class="kpi-card"><h4>📞 Connection Rate</h4><div class="kpi-value">${connRate.toFixed(1)}%</div></div>
             `;
             
-            // Region Chart
-            if(charts.region) charts.region.destroy();
+            // Team-wise Performance Chart (by Team Lead / Region)
+            if(charts.team) charts.team.destroy();
             if(f.region.length){
-                charts.region = new Chart(document.getElementById('regionChart'), {
+                charts.team = new Chart(document.getElementById('teamChart'), {
                     type: 'bar',
                     data: {
                         labels: f.region.map(r=>r.region),
@@ -341,7 +328,7 @@
                 });
             }
             
-            // City Chart - shows ALL cities in the selected regions
+            // City Chart
             const cityCounts = {};
             f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
             
@@ -372,44 +359,51 @@
                 ctx.fillText('No cities found', 200, 150);
             }
             
-            // Channel Chart
-            const totalWhatsapp = f.agent.reduce((s,a)=>s+a.whatsapp,0);
-            const totalEmails = f.agent.reduce((s,a)=>s+a.emails,0);
-            if(charts.channel) charts.channel.destroy();
-            charts.channel = new Chart(document.getElementById('channelChart'), {
-                type: 'bar',
-                data: { labels: ['Connected Calls', 'WhatsApp', 'Emails'], datasets: [{ data: [totalConnected, totalWhatsapp, totalEmails], backgroundColor: '#A05AFF', borderRadius: 8, barPercentage: 0.6 }] },
-                options: {
-                    responsive: true, maintainAspectRatio: true,
-                    plugins: { tooltip: { callbacks: { label: function(ctx) { return ctx.raw.toLocaleString(); } } }, legend: { display: false }, datalabels: { anchor: 'end', align: 'top', offset: 4, formatter: (value) => value.toLocaleString(), font: { weight: 'bold', size: 11 }, color: '#2d3a45' } },
-                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Count', font: { weight: 'bold' } } }, x: { title: { display: true, text: 'Channel', font: { weight: 'bold' } } } }
-                }
-            });
+            // Agent-wise Performance Chart (Top 10 by Achieved Leads)
+            const agentAchievements = f.agent.map(a => ({
+                name: a.agent,
+                achieved: a.achievedLeads,
+                target: a.monthlyTarget
+            })).sort((a,b) => b.achieved - a.achieved).slice(0, 10);
             
-            // Agent Table
-            const headers = ['Agent', 'Region', 'Total Calls', 'Connected', 'WhatsApp', 'Emails', 'Week 1-5 Leads', 'Monthly Target', 'Achieved', 'Achievement %'];
-            document.getElementById('agentTableHead').innerHTML = `<tr>${headers.map(h=>`<th>${h}</th>`).join('')}`;
-            document.getElementById('agentTableBody').innerHTML = f.agent.map(a => {
-                const weekly = a.week1 + a.week2 + a.week3 + a.week4 + a.week5;
-                const cls = a.achievementPct >= 80 ? 'achievement-high' : (a.achievementPct >= 50 ? '' : 'achievement-low');
-                return `tr
-                    <td>${a.agent}</td>
-                    <td>${a.region}</td>
-                    <td>${a.totalCalls}</td>
-                    <td>${a.connectedCalls}</td>
-                    <td>${a.whatsapp}</td>
-                    <td>${a.emails}</td>
-                    <td>${weekly}</td>
-                    <td>${a.monthlyTarget}</td>
-                    <td>${a.achievedLeads}</td>
-                    <td class="${cls}">${a.achievementPct.toFixed(1)}%</td>
-                </tr>`;
-            }).join('');
+            if(charts.agent) charts.agent.destroy();
+            if(agentAchievements.length){
+                charts.agent = new Chart(document.getElementById('agentPerformanceChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: agentAchievements.map(a => a.name.length > 15 ? a.name.substring(0, 12) + '...' : a.name),
+                        datasets: [
+                            { label: 'Achieved Leads', data: agentAchievements.map(a => a.achieved), backgroundColor: '#A05AFF', borderRadius: 8, barPercentage: 0.7 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        indexAxis: 'y',
+                        plugins: {
+                            tooltip: { callbacks: { label: function(ctx) { return `Achieved: ${ctx.raw.toLocaleString()} leads`; } } },
+                            legend: { display: false },
+                            datalabels: { anchor: 'end', align: 'right', offset: 4, formatter: (value) => value.toLocaleString(), font: { weight: 'bold', size: 10 }, color: '#2d3a45' }
+                        },
+                        scales: {
+                            x: { beginAtZero: true, title: { display: true, text: 'Leads Achieved', font: { weight: 'bold' } }, grid: { color: '#e2e8f0' } },
+                            y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+                        }
+                    }
+                });
+            } else {
+                const ctx = document.getElementById('agentPerformanceChart').getContext('2d');
+                ctx.clearRect(0, 0, 400, 300);
+                ctx.font = '14px Segoe UI';
+                ctx.fillStyle = '#94a3b8';
+                ctx.textAlign = 'center';
+                ctx.fillText('No agent data available', 200, 150);
+            }
         }
         
         // Event listeners for all filters
         document.getElementById('filterRegion').addEventListener('change', () => updateDashboard());
-        document.getElementById('filterAgent').addEventListener('change', () => updateDashboard());
+        document.getElementById('filterTeamLead').addEventListener('change', () => updateDashboard());
         document.getElementById('filterCity').addEventListener('change', () => updateDashboard());
         document.getElementById('dateStart').addEventListener('change', () => updateDashboard());
         document.getElementById('dateEnd').addEventListener('change', () => updateDashboard());
