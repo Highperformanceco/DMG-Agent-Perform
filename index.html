@@ -25,19 +25,20 @@
         .filter-group label { font-size: 0.8em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
         .filter-group select, .filter-group input { padding: 10px 15px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 0.9em; background: white; min-width: 150px; cursor: pointer; }
         .filter-group select:focus, .filter-group input:focus { outline: none; border-color: #A05AFF; box-shadow: 0 0 0 2px rgba(160,90,255,0.2); }
-        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 30px; }
         .kpi-card { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid rgba(160,90,255,0.2); transition: transform 0.3s ease; }
         .kpi-card:hover { transform: translateY(-5px); }
         .kpi-card h4 { color: #64748b; font-size: 0.85em; font-weight: 500; margin-bottom: 10px; }
         .kpi-value { font-size: 2em; font-weight: 700; color: #2d3a45; }
+        .kpi-sub { font-size: 0.7rem; color: #94a3b8; margin-top: 5px; }
         .charts-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .chart-card { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid rgba(160,90,255,0.2); }
         .chart-card h3 { color: #2d3a45; margin-bottom: 15px; font-size: 1.1em; }
-        canvas { max-height: 300px; }
+        canvas { max-height: 400px; }
         .error-message { background: #fee2e2; color: #dc2626; padding: 12px 20px; border-radius: 10px; margin-bottom: 15px; display: none; }
         .footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 0.9em; }
-        .filter-note { font-size: 0.75em; color: #A05AFF; margin-top: 5px; font-style: italic; }
-        .kpi-sub { font-size: 0.7rem; color: #94a3b8; margin-top: 5px; }
+        @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
 <body>
@@ -53,7 +54,7 @@
         
         <div class="filters">
             <div class="filter-group"><label>🌍 Region</label><select id="filterRegion"><option value="all">All Regions</option></select></div>
-            <div class="filter-group"><label>👤 Team Lead</label><select id="filterTeamLead"><option value="all">All Team Leads</option></select></div>
+            <div class="filter-group"><label>👤 Agent</label><select id="filterAgent"><option value="all">All Agents</option></select></div>
             <div class="filter-group"><label>🏙️ City</label><select id="filterCity"><option value="all">All Cities</option></select></div>
             <div class="filter-group"><label>📅 Date Range (Start)</label><input type="date" id="dateStart"></div>
             <div class="filter-group"><label>📅 Date Range (End)</label><input type="date" id="dateEnd"></div>
@@ -67,7 +68,12 @@
                 <div class="chart-card"><h3>🌍 City Distribution</h3><canvas id="cityChart"></canvas></div>
             </div>
             
-            <div class="chart-card" style="margin-bottom: 25px;"><h3>⭐ Agent-wise Performance (Top 10 by Achieved Leads)</h3><canvas id="agentPerformanceChart" style="max-height: 250px;"></canvas></div>
+            <div class="chart-card" style="margin-bottom: 25px;">
+                <h3>⭐ Agent-wise Detailed Performance</h3>
+                <div style="overflow-x: auto;">
+                    <canvas id="agentDetailedChart" style="max-height: 500px; width: 100%;"></canvas>
+                </div>
+            </div>
         </div>
         
         <div class="footer"><p>Data refreshes from Google Sheets | Last sync: <span id="syncTime">—</span></p></div>
@@ -86,7 +92,7 @@
 
         let regionData = [], agentData = [], cityData = [];
         let configData = { monthlyGoalTotal: 176, dailyGoalPerRegion: 2 };
-        let charts = { team: null, city: null, agent: null };
+        let charts = { team: null, city: null, agentDetailed: null };
         let isLoading = false;
 
         function showError(msg) { const d=document.getElementById('errorMessage'); d.innerHTML=msg; d.style.display='block'; setTimeout(()=>d.style.display='none',5000); }
@@ -213,16 +219,16 @@
         
         function updateFilters(){
             const regions=[...new Set(regionData.map(r=>r.region).filter(r=>r))];
-            const teamLeads=[...new Set(agentData.map(a=>a.region).filter(r=>r))];
+            const agents=[...new Set(agentData.map(a=>a.agent).filter(a=>a))];
             const cities=[...new Set(cityData.map(c=>c.city).filter(c=>c))];
             
             const rs=document.getElementById('filterRegion'); 
             rs.innerHTML='<option value="all">All Regions</option>'; 
             regions.forEach(r=>rs.innerHTML+=`<option value="${r}">${r}</option>`);
             
-            const tl=document.getElementById('filterTeamLead'); 
-            tl.innerHTML='<option value="all">All Team Leads</option>'; 
-            teamLeads.forEach(t=>tl.innerHTML+=`<option value="${t}">${t}</option>`);
+            const ag=document.getElementById('filterAgent'); 
+            ag.innerHTML='<option value="all">All Agents</option>'; 
+            agents.forEach(a=>ag.innerHTML+=`<option value="${a}">${a}</option>`);
             
             const cs=document.getElementById('filterCity'); 
             cs.innerHTML='<option value="all">All Cities</option>'; 
@@ -231,7 +237,7 @@
         
         function getFilteredData(){
             const selectedRegion = document.getElementById('filterRegion').value;
-            const selectedTeamLead = document.getElementById('filterTeamLead').value;
+            const selectedAgent = document.getElementById('filterAgent').value;
             const selectedCity = document.getElementById('filterCity').value;
             const startDate = document.getElementById('dateStart').value;
             const endDate = document.getElementById('dateEnd').value;
@@ -247,9 +253,12 @@
                 }
             }
             
-            // If team lead is selected, add its region
-            if (selectedTeamLead !== 'all') {
-                targetRegions.add(selectedTeamLead);
+            // If agent is selected, add its region
+            if (selectedAgent !== 'all') {
+                const agentInfo = agentData.find(a => a.agent === selectedAgent);
+                if (agentInfo && agentInfo.region) {
+                    targetRegions.add(agentInfo.region);
+                }
             }
             
             // If region is selected, add it
@@ -271,13 +280,13 @@
                 filteredRegion = filteredRegion.filter(r => r.date >= startDate && r.date <= endDate);
             }
             
-            // Filter agent data - show agents from target regions
+            // Filter agent data
             let filteredAgent = agentData.filter(a => targetRegions.includes(a.region));
-            if (selectedTeamLead !== 'all') {
-                filteredAgent = filteredAgent.filter(a => a.region === selectedTeamLead);
+            if (selectedAgent !== 'all') {
+                filteredAgent = filteredAgent.filter(a => a.agent === selectedAgent);
             }
             
-            // Filter city data - show cities from target regions
+            // Filter city data
             let filteredCity = cityData.filter(c => targetRegions.includes(c.country));
             if (selectedCity !== 'all') {
                 filteredCity = filteredCity.filter(c => c.city === selectedCity);
@@ -301,9 +310,7 @@
             const totalEmails = f.agent.reduce((s,a)=>s+a.emails,0);
             const connRate = totalCalls > 0 ? (totalConnected/totalCalls)*100 : 0;
             
-            // KPI Cards with 4 cards in a row (will show 4 cards, but we need 5? Let's make 2 rows or adjust)
-            // To show all 5 stats, I'll create 2 rows: Row1: 4 cards, Row2: 1 card or adjust grid
-            // Let's make grid auto-fit and show all 5
+            // KPI Cards
             document.getElementById('kpiGrid').innerHTML = `
                 <div class="kpi-card"><h4>📅 Monthly Goal</h4><div class="kpi-value">${totalGoal.toLocaleString()}</div><div class="kpi-sub">Total target for all regions</div></div>
                 <div class="kpi-card"><h4>✅ Achieved Leads</h4><div class="kpi-value">${totalAchieved.toLocaleString()}</div><div class="kpi-sub">${overallAch.toFixed(1)}% of target</div></div>
@@ -312,7 +319,7 @@
                 <div class="kpi-card"><h4>📧 Emails Sent</h4><div class="kpi-value">${totalEmails.toLocaleString()}</div><div class="kpi-sub">Email communications</div></div>
             `;
             
-            // Team-wise Performance Chart (by Team Lead / Region)
+            // Team-wise Performance Chart
             if(charts.team) charts.team.destroy();
             if(f.region.length){
                 charts.team = new Chart(document.getElementById('teamChart'), {
@@ -367,21 +374,27 @@
                 ctx.fillText('No cities found', 200, 150);
             }
             
-            // Agent-wise Performance Chart (Top 10 by Achieved Leads)
-            const agentAchievements = f.agent.map(a => ({
-                name: a.agent,
-                achieved: a.achievedLeads,
-                target: a.monthlyTarget
-            })).sort((a,b) => b.achieved - a.achieved).slice(0, 10);
+            // Agent-wise Detailed Performance Chart (Horizontal Bar Chart with multiple metrics)
+            if(charts.agentDetailed) charts.agentDetailed.destroy();
             
-            if(charts.agent) charts.agent.destroy();
-            if(agentAchievements.length){
-                charts.agent = new Chart(document.getElementById('agentPerformanceChart'), {
+            // Sort agents by achieved leads descending
+            const sortedAgents = [...f.agent].sort((a,b) => b.achievedLeads - a.achievedLeads);
+            
+            if(sortedAgents.length){
+                // Take top 15 agents for better visibility
+                const topAgents = sortedAgents.slice(0, 15);
+                const agentNames = topAgents.map(a => a.agent.length > 20 ? a.agent.substring(0, 18) + '...' : a.agent);
+                
+                charts.agentDetailed = new Chart(document.getElementById('agentDetailedChart'), {
                     type: 'bar',
                     data: {
-                        labels: agentAchievements.map(a => a.name.length > 15 ? a.name.substring(0, 12) + '...' : a.name),
+                        labels: agentNames,
                         datasets: [
-                            { label: 'Achieved Leads', data: agentAchievements.map(a => a.achieved), backgroundColor: '#A05AFF', borderRadius: 8, barPercentage: 0.7 }
+                            { label: 'Total Calls', data: topAgents.map(a => a.totalCalls), backgroundColor: '#A05AFF', borderRadius: 6, barPercentage: 0.8, categoryPercentage: 0.9 },
+                            { label: 'Connected Calls', data: topAgents.map(a => a.connectedCalls), backgroundColor: '#1BCFB4', borderRadius: 6, barPercentage: 0.8, categoryPercentage: 0.9 },
+                            { label: 'WhatsApp', data: topAgents.map(a => a.whatsapp), backgroundColor: '#FE9496', borderRadius: 6, barPercentage: 0.8, categoryPercentage: 0.9 },
+                            { label: 'Emails', data: topAgents.map(a => a.emails), backgroundColor: '#4BCBEB', borderRadius: 6, barPercentage: 0.8, categoryPercentage: 0.9 },
+                            { label: 'Achieved Leads', data: topAgents.map(a => a.achievedLeads), backgroundColor: '#F59E0B', borderRadius: 6, barPercentage: 0.8, categoryPercentage: 0.9 }
                         ]
                     },
                     options: {
@@ -389,29 +402,49 @@
                         maintainAspectRatio: true,
                         indexAxis: 'y',
                         plugins: {
-                            tooltip: { callbacks: { label: function(ctx) { return `Achieved: ${ctx.raw.toLocaleString()} leads`; } } },
-                            legend: { display: false },
-                            datalabels: { anchor: 'end', align: 'right', offset: 4, formatter: (value) => value.toLocaleString(), font: { weight: 'bold', size: 10 }, color: '#2d3a45' }
+                            tooltip: { 
+                                callbacks: { 
+                                    label: function(ctx) { 
+                                        return `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}`; 
+                                    } 
+                                } 
+                            },
+                            legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true, boxWidth: 12 } },
+                            datalabels: { 
+                                anchor: 'end', 
+                                align: 'right', 
+                                offset: 4, 
+                                formatter: (value) => value > 0 ? value.toLocaleString() : '',
+                                font: { weight: 'bold', size: 9 },
+                                color: '#2d3a45'
+                            }
                         },
                         scales: {
-                            x: { beginAtZero: true, title: { display: true, text: 'Leads Achieved', font: { weight: 'bold' } }, grid: { color: '#e2e8f0' } },
-                            y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+                            x: { 
+                                beginAtZero: true, 
+                                title: { display: true, text: 'Count', font: { weight: 'bold' } }, 
+                                grid: { color: '#e2e8f0' } 
+                            },
+                            y: { 
+                                ticks: { font: { size: 11 } }, 
+                                grid: { display: false } 
+                            }
                         }
                     }
                 });
             } else {
-                const ctx = document.getElementById('agentPerformanceChart').getContext('2d');
-                ctx.clearRect(0, 0, 400, 300);
+                const ctx = document.getElementById('agentDetailedChart').getContext('2d');
+                ctx.clearRect(0, 0, 800, 400);
                 ctx.font = '14px Segoe UI';
                 ctx.fillStyle = '#94a3b8';
                 ctx.textAlign = 'center';
-                ctx.fillText('No agent data available', 200, 150);
+                ctx.fillText('No agent data available', 400, 200);
             }
         }
         
         // Event listeners for all filters
         document.getElementById('filterRegion').addEventListener('change', () => updateDashboard());
-        document.getElementById('filterTeamLead').addEventListener('change', () => updateDashboard());
+        document.getElementById('filterAgent').addEventListener('change', () => updateDashboard());
         document.getElementById('filterCity').addEventListener('change', () => updateDashboard());
         document.getElementById('dateStart').addEventListener('change', () => updateDashboard());
         document.getElementById('dateEnd').addEventListener('change', () => updateDashboard());
