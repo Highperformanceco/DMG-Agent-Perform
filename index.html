@@ -95,23 +95,28 @@
         let charts = { team: null, city: null, agentDetailed: null };
         let isLoading = false;
 
-        // Soft, eye-catching colors for city distribution
+        // Vibrant but eye-catching city colors
         const cityColors = [
-            '#E8B4B8',  // Soft Rose
-            '#B4E8D4',  // Soft Mint
-            '#FFE5B4',  // Soft Peach
-            '#D4B8E8',  // Soft Lavender
-            '#B8D4E8',  // Soft Sky Blue
-            '#F5B8D4',  // Soft Pink
-            '#C4E8B8',  // Soft Sage
-            '#E8D4B8',  // Soft Sand
-            '#B8E8E8',  // Soft Aqua
-            '#E8C4B8',  // Soft Coral
-            '#C4B8E8',  // Soft Periwinkle
-            '#B8E8C4',  // Soft Seafoam
-            '#E8B8C4',  // Soft Blush
-            '#D4E8B8',  // Soft Lime
-            '#B8C4E8'   // Soft Bluebell
+            '#FF6B6B',  // Coral Red
+            '#4ECDC4',  // Turquoise
+            '#45B7D1',  // Sky Blue
+            '#96CEB4',  // Sage Green
+            '#FFEAA7',  // Soft Yellow
+            '#DDA0DD',  // Plum
+            '#98D8C8',  // Mint
+            '#F7B05E',  // Apricot
+            '#B5EAD7',  // Seafoam
+            '#C7CEE6',  // Lavender
+            '#FFB7B2',  // Blush
+            '#A2D2FF',  // Baby Blue
+            '#B8F2E6',  // Pale Aqua
+            '#FFD6B5',  // Peach
+            '#E2CFC4',  // Taupe
+            '#C4E6F1',  // Light Cyan
+            '#FADADD',  // Light Pink
+            '#D4E2D4',  // Pale Green
+            '#FFD966',  // Golden
+            '#E6B8E2'   // Light Purple
         ];
 
         function showError(msg) { const d=document.getElementById('errorMessage'); d.innerHTML=msg; d.style.display='block'; setTimeout(()=>d.style.display='none',5000); }
@@ -324,7 +329,7 @@
                 <div class="kpi-card"><h4>📧 Emails Sent</h4><div class="kpi-value">${totalEmails.toLocaleString()}</div><div class="kpi-sub">Email communications</div></div>
             `;
             
-            // Team-wise Chart with FIXED label positioning
+            // Team-wise Chart with FIXED label positioning to prevent overlap
             if(charts.team) charts.team.destroy();
             if(f.region.length){
                 charts.team = new Chart(document.getElementById('teamChart'), {
@@ -332,8 +337,8 @@
                     data: {
                         labels: f.region.map(r=>r.region),
                         datasets: [
-                            { label: 'Monthly Goal', data: f.region.map(r=>r.monthlyGoal), backgroundColor: 'rgba(160,90,255,0.7)', borderRadius: 8, barPercentage: 0.65 },
-                            { label: 'Achieved', data: f.region.map(r=>r.monthlyAchieved), backgroundColor: 'rgba(27,207,180,0.7)', borderRadius: 8, barPercentage: 0.65 }
+                            { label: 'Monthly Goal', data: f.region.map(r=>r.monthlyGoal), backgroundColor: 'rgba(160,90,255,0.8)', borderRadius: 8, barPercentage: 0.6, categoryPercentage: 0.8 },
+                            { label: 'Achieved', data: f.region.map(r=>r.monthlyAchieved), backgroundColor: 'rgba(27,207,180,0.8)', borderRadius: 8, barPercentage: 0.6, categoryPercentage: 0.8 }
                         ]
                     },
                     options: {
@@ -346,24 +351,31 @@
                             datalabels: {
                                 anchor: 'end',
                                 align: 'top',
-                                offset: 8,
+                                offset: 6,
                                 formatter: (value) => value.toLocaleString(),
                                 font: { weight: 'bold', size: 11 },
                                 color: '#2d3a45',
-                                backgroundColor: 'rgba(255,255,255,0.7)',
+                                backgroundColor: 'rgba(255,255,255,0.85)',
                                 borderRadius: 4,
-                                padding: { left: 4, right: 4, top: 2, bottom: 2 }
+                                padding: { left: 5, right: 5, top: 2, bottom: 2 },
+                                clamp: true,
+                                clip: false
                             }
                         },
                         scales: {
-                            y: { beginAtZero: true, ticks: { stepSize: 5, color: '#2d3a45' }, grid: { color: '#e2e8f0' } },
+                            y: { 
+                                beginAtZero: true, 
+                                ticks: { stepSize: 5, color: '#2d3a45' }, 
+                                grid: { color: '#e2e8f0' },
+                                max: Math.max(...f.region.flatMap(r => [r.monthlyGoal, r.monthlyAchieved])) + 10
+                            },
                             x: { ticks: { color: '#2d3a45' }, grid: { display: false } }
                         }
                     }
                 });
             }
             
-            // City Chart with SOFT COLORS and FIXED label positioning
+            // City Chart with VIBRANT COLORS
             const cityCounts = {};
             f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
             const cityLabels = Object.keys(cityCounts);
@@ -379,7 +391,9 @@
                             data: cityDataValues, 
                             backgroundColor: cityColors.slice(0, cityLabels.length),
                             borderWidth: 0,
-                            hoverOffset: 8
+                            hoverOffset: 10,
+                            hoverBorderWidth: 2,
+                            hoverBorderColor: '#fff'
                         }]
                     },
                     options: {
@@ -387,27 +401,44 @@
                         maintainAspectRatio: true,
                         layout: { padding: 10 },
                         plugins: {
-                            tooltip: { callbacks: { label: function(ctx) { 
-                                const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
-                                const percentage = ((ctx.raw / total) * 100).toFixed(1);
-                                return `${ctx.label}: ${ctx.raw} (${percentage}%)`;
-                            } } },
-                            legend: { position: 'right', labels: { font: { size: 11, family: "'Segoe UI'" }, usePointStyle: true, boxWidth: 12, padding: 10 } },
+                            tooltip: { 
+                                callbacks: { 
+                                    label: function(ctx) { 
+                                        const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
+                                        const percentage = ((ctx.raw / total) * 100).toFixed(1);
+                                        return `${ctx.label}: ${ctx.raw} (${percentage}%)`;
+                                    } 
+                                },
+                                backgroundColor: '#2d3a45',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                padding: 8
+                            },
+                            legend: { 
+                                position: 'right', 
+                                labels: { 
+                                    font: { size: 10, family: "'Segoe UI'" }, 
+                                    usePointStyle: true, 
+                                    boxWidth: 10,
+                                    padding: 8,
+                                    color: '#2d3a45'
+                                } 
+                            },
                             datalabels: {
                                 formatter: (value, ctx) => {
                                     const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
                                     const percentage = ((value / total) * 100).toFixed(1);
-                                    if (percentage < 5) return ''; // Hide labels for very small slices
+                                    if (percentage < 4) return '';
                                     return `${percentage}%`;
                                 },
                                 color: '#2d3a45',
-                                font: { weight: 'bold', size: 12 },
+                                font: { weight: 'bold', size: 11 },
                                 backgroundColor: 'rgba(255,255,255,0.85)',
                                 borderRadius: 20,
-                                padding: { left: 8, right: 8, top: 4, bottom: 4 },
+                                padding: { left: 6, right: 6, top: 3, bottom: 3 },
                                 align: 'center',
                                 anchor: 'center',
-                                offset: 5
+                                offset: 0
                             }
                         }
                     }
@@ -445,20 +476,17 @@
                         responsive: true,
                         maintainAspectRatio: true,
                         indexAxis: 'y',
-                        layout: { padding: { left: 10, right: 40, top: 10, bottom: 10 } },
+                        layout: { padding: { left: 10, right: 45, top: 10, bottom: 10 } },
                         plugins: {
                             tooltip: { callbacks: { label: function(ctx) { return `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}`; } } },
                             legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true, boxWidth: 12 } },
                             datalabels: { 
                                 anchor: 'end', 
                                 align: 'right', 
-                                offset: 6, 
+                                offset: 4, 
                                 formatter: (value) => value > 0 ? value.toLocaleString() : '',
                                 font: { weight: 'bold', size: 9 },
-                                color: '#2d3a45',
-                                backgroundColor: 'rgba(255,255,255,0.7)',
-                                borderRadius: 3,
-                                padding: { left: 3, right: 3, top: 1, bottom: 1 }
+                                color: '#2d3a45'
                             }
                         },
                         scales: {
