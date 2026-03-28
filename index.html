@@ -95,6 +95,25 @@
         let charts = { team: null, city: null, agentDetailed: null };
         let isLoading = false;
 
+        // Soft, eye-catching colors for city distribution
+        const cityColors = [
+            '#E8B4B8',  // Soft Rose
+            '#B4E8D4',  // Soft Mint
+            '#FFE5B4',  // Soft Peach
+            '#D4B8E8',  // Soft Lavender
+            '#B8D4E8',  // Soft Sky Blue
+            '#F5B8D4',  // Soft Pink
+            '#C4E8B8',  // Soft Sage
+            '#E8D4B8',  // Soft Sand
+            '#B8E8E8',  // Soft Aqua
+            '#E8C4B8',  // Soft Coral
+            '#C4B8E8',  // Soft Periwinkle
+            '#B8E8C4',  // Soft Seafoam
+            '#E8B8C4',  // Soft Blush
+            '#D4E8B8',  // Soft Lime
+            '#B8C4E8'   // Soft Bluebell
+        ];
+
         function showError(msg) { const d=document.getElementById('errorMessage'); d.innerHTML=msg; d.style.display='block'; setTimeout(()=>d.style.display='none',5000); }
         function setLoading(l){ isLoading=l; const btn=document.getElementById('refreshBtn'); if(btn){ btn.disabled=l; btn.innerHTML=l?'<span class="loading-spinner"></span> Loading...':'🔄 Refresh'; } }
         
@@ -242,10 +261,8 @@
             const startDate = document.getElementById('dateStart').value;
             const endDate = document.getElementById('dateEnd').value;
             
-            // Determine which regions to show based on all filters
             let targetRegions = new Set();
             
-            // If city is selected, add its region
             if (selectedCity !== 'all') {
                 const cityInfo = cityData.find(c => c.city === selectedCity);
                 if (cityInfo && cityInfo.country) {
@@ -253,7 +270,6 @@
                 }
             }
             
-            // If agent is selected, add its region
             if (selectedAgent !== 'all') {
                 const agentInfo = agentData.find(a => a.agent === selectedAgent);
                 if (agentInfo && agentInfo.region) {
@@ -261,32 +277,26 @@
                 }
             }
             
-            // If region is selected, add it
             if (selectedRegion !== 'all') {
                 targetRegions.add(selectedRegion);
             }
             
-            // If no specific selections, show all regions
             if (targetRegions.size === 0) {
                 regionData.forEach(r => targetRegions.add(r.region));
             }
             
-            // Convert Set to Array
             targetRegions = Array.from(targetRegions);
             
-            // Filter region data
             let filteredRegion = regionData.filter(r => targetRegions.includes(r.region));
             if (startDate && endDate) {
                 filteredRegion = filteredRegion.filter(r => r.date >= startDate && r.date <= endDate);
             }
             
-            // Filter agent data
             let filteredAgent = agentData.filter(a => targetRegions.includes(a.region));
             if (selectedAgent !== 'all') {
                 filteredAgent = filteredAgent.filter(a => a.agent === selectedAgent);
             }
             
-            // Filter city data
             let filteredCity = cityData.filter(c => targetRegions.includes(c.country));
             if (selectedCity !== 'all') {
                 filteredCity = filteredCity.filter(c => c.city === selectedCity);
@@ -298,19 +308,14 @@
         function updateDashboard(){
             const f = getFilteredData();
             
-            // Calculate KPIs from Region Data
             const totalGoal = configData.monthlyGoalTotal;
             const totalAchieved = f.region.reduce((s,r)=>s+r.monthlyAchieved,0);
             const overallAch = totalGoal > 0 ? (totalAchieved/totalGoal)*100 : 0;
-            
-            // Calculate Communication Stats from Agent Data
             const totalCalls = f.agent.reduce((s,a)=>s+a.totalCalls,0);
             const totalConnected = f.agent.reduce((s,a)=>s+a.connectedCalls,0);
             const totalWhatsapp = f.agent.reduce((s,a)=>s+a.whatsapp,0);
             const totalEmails = f.agent.reduce((s,a)=>s+a.emails,0);
-            const connRate = totalCalls > 0 ? (totalConnected/totalCalls)*100 : 0;
             
-            // KPI Cards
             document.getElementById('kpiGrid').innerHTML = `
                 <div class="kpi-card"><h4>📅 Monthly Goal</h4><div class="kpi-value">${totalGoal.toLocaleString()}</div><div class="kpi-sub">Total target for all regions</div></div>
                 <div class="kpi-card"><h4>✅ Achieved Leads</h4><div class="kpi-value">${totalAchieved.toLocaleString()}</div><div class="kpi-sub">${overallAch.toFixed(1)}% of target</div></div>
@@ -319,7 +324,7 @@
                 <div class="kpi-card"><h4>📧 Emails Sent</h4><div class="kpi-value">${totalEmails.toLocaleString()}</div><div class="kpi-sub">Email communications</div></div>
             `;
             
-            // Team-wise Performance Chart
+            // Team-wise Chart with FIXED label positioning
             if(charts.team) charts.team.destroy();
             if(f.region.length){
                 charts.team = new Chart(document.getElementById('teamChart'), {
@@ -327,41 +332,83 @@
                     data: {
                         labels: f.region.map(r=>r.region),
                         datasets: [
-                            { label: 'Monthly Goal', data: f.region.map(r=>r.monthlyGoal), backgroundColor: 'rgba(160,90,255,0.6)', borderRadius: 8 },
-                            { label: 'Achieved', data: f.region.map(r=>r.monthlyAchieved), backgroundColor: 'rgba(27,207,180,0.6)', borderRadius: 8 }
+                            { label: 'Monthly Goal', data: f.region.map(r=>r.monthlyGoal), backgroundColor: 'rgba(160,90,255,0.7)', borderRadius: 8, barPercentage: 0.65 },
+                            { label: 'Achieved', data: f.region.map(r=>r.monthlyAchieved), backgroundColor: 'rgba(27,207,180,0.7)', borderRadius: 8, barPercentage: 0.65 }
                         ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
+                        layout: { padding: { top: 35, bottom: 10, left: 10, right: 10 } },
                         plugins: {
                             tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.raw.toLocaleString(); } } },
                             legend: { position: 'top' },
-                            datalabels: { anchor: 'end', align: 'top', offset: 4, formatter: (value) => value.toLocaleString(), font: { weight: 'bold', size: 11 }, color: '#2d3a45' }
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                offset: 8,
+                                formatter: (value) => value.toLocaleString(),
+                                font: { weight: 'bold', size: 11 },
+                                color: '#2d3a45',
+                                backgroundColor: 'rgba(255,255,255,0.7)',
+                                borderRadius: 4,
+                                padding: { left: 4, right: 4, top: 2, bottom: 2 }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 5, color: '#2d3a45' }, grid: { color: '#e2e8f0' } },
+                            x: { ticks: { color: '#2d3a45' }, grid: { display: false } }
                         }
                     }
                 });
             }
             
-            // City Chart
+            // City Chart with SOFT COLORS and FIXED label positioning
             const cityCounts = {};
             f.city.forEach(c => { cityCounts[c.city] = (cityCounts[c.city] || 0) + 1; });
+            const cityLabels = Object.keys(cityCounts);
+            const cityDataValues = Object.values(cityCounts);
             
             if(charts.city) charts.city.destroy();
-            if(Object.keys(cityCounts).length){
+            if(cityLabels.length){
                 charts.city = new Chart(document.getElementById('cityChart'), {
                     type: 'pie',
                     data: {
-                        labels: Object.keys(cityCounts),
-                        datasets: [{ data: Object.values(cityCounts), backgroundColor: ['#A05AFF', '#1BCFB4', '#FE9496', '#4BCBEB', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'], borderWidth: 0, hoverOffset: 10 }]
+                        labels: cityLabels,
+                        datasets: [{ 
+                            data: cityDataValues, 
+                            backgroundColor: cityColors.slice(0, cityLabels.length),
+                            borderWidth: 0,
+                            hoverOffset: 8
+                        }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
+                        layout: { padding: 10 },
                         plugins: {
-                            tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.raw + ' city(s)'; } } },
-                            legend: { position: 'right', labels: { font: { size: 11 } } },
-                            datalabels: { formatter: (value, ctx) => { const total = ctx.dataset.data.reduce((a,b) => a + b, 0); const percentage = ((value / total) * 100).toFixed(1); return `${value} (${percentage}%)`; }, color: '#fff', font: { weight: 'bold', size: 12 }, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: { left: 6, right: 6, top: 2, bottom: 2 }, align: 'center', anchor: 'center', offset: 0 }
+                            tooltip: { callbacks: { label: function(ctx) { 
+                                const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
+                                const percentage = ((ctx.raw / total) * 100).toFixed(1);
+                                return `${ctx.label}: ${ctx.raw} (${percentage}%)`;
+                            } } },
+                            legend: { position: 'right', labels: { font: { size: 11, family: "'Segoe UI'" }, usePointStyle: true, boxWidth: 12, padding: 10 } },
+                            datalabels: {
+                                formatter: (value, ctx) => {
+                                    const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    if (percentage < 5) return ''; // Hide labels for very small slices
+                                    return `${percentage}%`;
+                                },
+                                color: '#2d3a45',
+                                font: { weight: 'bold', size: 12 },
+                                backgroundColor: 'rgba(255,255,255,0.85)',
+                                borderRadius: 20,
+                                padding: { left: 8, right: 8, top: 4, bottom: 4 },
+                                align: 'center',
+                                anchor: 'center',
+                                offset: 5
+                            }
                         }
                     }
                 });
@@ -374,14 +421,11 @@
                 ctx.fillText('No cities found', 200, 150);
             }
             
-            // Agent-wise Detailed Performance Chart (Horizontal Bar Chart with multiple metrics)
+            // Agent-wise Detailed Chart
             if(charts.agentDetailed) charts.agentDetailed.destroy();
-            
-            // Sort agents by achieved leads descending
             const sortedAgents = [...f.agent].sort((a,b) => b.achievedLeads - a.achievedLeads);
             
             if(sortedAgents.length){
-                // Take top 15 agents for better visibility
                 const topAgents = sortedAgents.slice(0, 15);
                 const agentNames = topAgents.map(a => a.agent.length > 20 ? a.agent.substring(0, 18) + '...' : a.agent);
                 
@@ -401,34 +445,25 @@
                         responsive: true,
                         maintainAspectRatio: true,
                         indexAxis: 'y',
+                        layout: { padding: { left: 10, right: 40, top: 10, bottom: 10 } },
                         plugins: {
-                            tooltip: { 
-                                callbacks: { 
-                                    label: function(ctx) { 
-                                        return `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}`; 
-                                    } 
-                                } 
-                            },
+                            tooltip: { callbacks: { label: function(ctx) { return `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}`; } } },
                             legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true, boxWidth: 12 } },
                             datalabels: { 
                                 anchor: 'end', 
                                 align: 'right', 
-                                offset: 4, 
+                                offset: 6, 
                                 formatter: (value) => value > 0 ? value.toLocaleString() : '',
                                 font: { weight: 'bold', size: 9 },
-                                color: '#2d3a45'
+                                color: '#2d3a45',
+                                backgroundColor: 'rgba(255,255,255,0.7)',
+                                borderRadius: 3,
+                                padding: { left: 3, right: 3, top: 1, bottom: 1 }
                             }
                         },
                         scales: {
-                            x: { 
-                                beginAtZero: true, 
-                                title: { display: true, text: 'Count', font: { weight: 'bold' } }, 
-                                grid: { color: '#e2e8f0' } 
-                            },
-                            y: { 
-                                ticks: { font: { size: 11 } }, 
-                                grid: { display: false } 
-                            }
+                            x: { beginAtZero: true, title: { display: true, text: 'Count', font: { weight: 'bold' } }, grid: { color: '#e2e8f0' } },
+                            y: { ticks: { font: { size: 11 } }, grid: { display: false } }
                         }
                     }
                 });
@@ -442,7 +477,6 @@
             }
         }
         
-        // Event listeners for all filters
         document.getElementById('filterRegion').addEventListener('change', () => updateDashboard());
         document.getElementById('filterAgent').addEventListener('change', () => updateDashboard());
         document.getElementById('filterCity').addEventListener('change', () => updateDashboard());
